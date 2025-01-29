@@ -6,7 +6,7 @@ import { StatusDisplay } from "./components/StatusDisplay";
 import { Timer } from "./components/Timer";
 import { Track } from "./components/Track";
 import type { Athlete, TestConfig, TrackPosition } from "./types";
-import type { AudioService } from "./utils/audio";
+import { AudioService } from "./utils/audio";
 import { calculateIntervalTime } from "./utils/timing";
 
 function App() {
@@ -31,14 +31,14 @@ function App() {
 	const [isRecovery, setIsRecovery] = useState(false);
 	const [workTime, setWorkTime] = useState(0);
 	const [recoveryTime, setRecoveryTime] = useState(0);
-	const audioService = useRef<AudioService>();
+	const audioService = useRef<AudioService>(new AudioService());
 	const recoveryTimer = useRef<number>();
 	const workTimer = useRef<number>();
 	const recoveryCountdown = useRef<number>();
 
 	useEffect(() => {
 		// Precargar todos los sonidos
-		audioService.current?.preloadAll().catch((error) => {
+		audioService.current.preloadAll().catch((error) => {
 			console.error("Error loading audio files:", error);
 		});
 	}, []);

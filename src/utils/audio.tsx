@@ -9,25 +9,25 @@ export class AudioService {
 	};
 
 	constructor() {
-		// Inicializar todos los sonidos
+		// Inicializar todos los sonidos con las rutas correctas
 		this.sounds = {
 			workStart: new Howl({
-				src: ["assets/work-start.mp3"],
+				src: ["/assets/work-start.mp3"],
 				volume: 0.8,
 				preload: true,
 			}),
 			workComplete: new Howl({
-				src: ["assets/work-complete.mp3"],
+				src: ["/assets/work-complete.mp3"],
 				volume: 0.8,
 				preload: true,
 			}),
 			recoveryStart: new Howl({
-				src: ["assets/recovery-start.mp3"],
+				src: ["/assets/recovery-start.mp3"],
 				volume: 0.8,
 				preload: true,
 			}),
 			recoveryComplete: new Howl({
-				src: ["assets/recovery-complete.mp3"],
+				src: ["/assets/recovery-complete.mp3"],
 				volume: 0.8,
 				preload: true,
 			}),
@@ -35,9 +35,7 @@ export class AudioService {
 	}
 
 	announceWorkStart(period: number) {
-		// Detener cualquier sonido actual
 		this.stopAll();
-		// Reproducir el sonido de inicio de trabajo
 		this.sounds.workStart.play();
 	}
 
@@ -60,12 +58,14 @@ export class AudioService {
 		Object.values(this.sounds).forEach((sound) => sound.stop());
 	}
 
-	// Método para cargar todos los sonidos de manera asíncrona
 	async preloadAll(): Promise<void> {
 		const loadPromises = Object.values(this.sounds).map((sound) => {
 			return new Promise<void>((resolve, reject) => {
 				sound.once("load", () => resolve());
-				sound.once("loaderror", () => reject());
+				sound.once("loaderror", (error) => {
+					console.error("Error loading sound:", error);
+					reject(error);
+				});
 			});
 		});
 
