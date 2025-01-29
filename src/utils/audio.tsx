@@ -6,6 +6,7 @@ export class AudioService {
 		workComplete: Howl;
 		recoveryStart: Howl;
 		recoveryComplete: Howl;
+		intervalBeep: Howl;
 	};
 
 	constructor() {
@@ -20,16 +21,25 @@ export class AudioService {
 				src: ["/assets/work-complete.mp3"],
 				volume: 0.8,
 				preload: true,
+				format: ["mp3"],
 			}),
 			recoveryStart: new Howl({
 				src: ["/assets/recovery-start.mp3"],
 				volume: 0.8,
 				preload: true,
+				format: ["mp3"],
 			}),
 			recoveryComplete: new Howl({
 				src: ["/assets/recovery-complete.mp3"],
 				volume: 0.8,
 				preload: true,
+				format: ["mp3"],
+			}),
+			intervalBeep: new Howl({
+				src: ["/assets/pi.mp3"],
+				volume: 0.8,
+				preload: true,
+				format: ["mp3"],
 			}),
 		};
 	}
@@ -52,6 +62,10 @@ export class AudioService {
 	announceRecoveryComplete() {
 		this.stopAll();
 		this.sounds.recoveryComplete.play();
+	}
+
+	playIntervalBeep() {
+		this.sounds.intervalBeep.play();
 	}
 
 	private stopAll() {

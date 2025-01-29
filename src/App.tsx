@@ -47,22 +47,21 @@ function App() {
 		let timer: number;
 
 		if (config.isRunning && !config.isPaused && !isRecovery) {
-			// Reset work timer when starting new period
 			setWorkTime(0);
 
-			// Start work timer
 			workTimer.current = window.setInterval(() => {
 				setWorkTime((t) => t + 1);
 			}, 1000);
 
 			const interval = calculateIntervalTime(config.currentPeriod);
 			timer = window.setInterval(() => {
+				audioService.current?.playIntervalBeep();
+
 				setPosition((prev) => {
 					const newSegment = (prev.segment + 1) % 8;
 					const newLap = newSegment === 0 ? (prev.lap + 1) % 4 : prev.lap;
 
 					if (newLap === 0 && newSegment === 0) {
-						// Period completed
 						audioService.current?.announceWorkComplete();
 						setIsRecovery(true);
 						return { period: prev.period + 1, lap: 0, segment: 0 };
