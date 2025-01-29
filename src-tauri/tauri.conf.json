@@ -31,21 +31,6 @@
 			"icons/icon.icns",
 			"icons/icon.ico"
 		],
-		"resources": ["resources/*.mp3"]
-	},
-	"plugins": {
-		"allowlist": {
-			"fs": {
-				"scope": ["$RESOURCE/*"],
-				"all": true
-			},
-			"path": {
-				"all": true
-			},
-			"protocol": {
-				"asset": true,
-				"assetScope": ["**"]
-			}
-		}
+		"resources": ["resources/*"]
 	}
 }
