@@ -99,7 +99,7 @@ function App() {
 			recoveryTimer.current = window.setTimeout(() => {
 				audioService.current?.announceRecoveryComplete();
 				setIsRecovery(false);
-				audioService.current?.announceWorkStart(position.period);
+				audioService.current?.announceWorkStart();
 				if (recoveryCountdown.current) clearInterval(recoveryCountdown.current);
 			}, config.recoveryTime * 1000);
 
@@ -108,18 +108,12 @@ function App() {
 				if (recoveryCountdown.current) clearInterval(recoveryCountdown.current);
 			};
 		}
-	}, [
-		isRecovery,
-		config.isRunning,
-		config.isPaused,
-		config.recoveryTime,
-		position.period,
-	]);
+	}, [isRecovery, config.isRunning, config.isPaused, config.recoveryTime]);
 
 	const handleStart = () => {
 		setConfig((c) => ({ ...c, isRunning: true, isPaused: false }));
 		if (!isRecovery) {
-			audioService.current?.announceWorkStart(position.period);
+			audioService.current?.announceWorkStart();
 		}
 	};
 
@@ -184,7 +178,7 @@ function App() {
 					activeAthletes={athletes.filter((a) => a.active).length}
 				/>
 
-				<Track position={position} athletes={config.athleteCount} />
+				<Track position={position} />
 
 				<AthleteManager
 					athletes={athletes}

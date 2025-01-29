@@ -78,7 +78,7 @@ export class AudioService {
 		}
 	}
 
-	async announceWorkStart(period: number): Promise<void> {
+	async announceWorkStart(): Promise<void> {
 		await this.stopAll();
 		await this.playSound("work-start");
 	}

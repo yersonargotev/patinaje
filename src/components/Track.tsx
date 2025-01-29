@@ -2,10 +2,9 @@ import { TrackPosition } from "../types";
 
 interface TrackProps {
 	position: TrackPosition;
-	athletes: number;
 }
 
-export const Track: React.FC<TrackProps> = ({ position, athletes }) => {
+export const Track: React.FC<TrackProps> = ({ position }) => {
 	const segments = Array(8).fill(0); // 8 segments per lap (50m each)
 
 	return (
