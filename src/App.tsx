@@ -6,7 +6,7 @@ import { StatusDisplay } from "./components/StatusDisplay";
 import { Timer } from "./components/Timer";
 import { Track } from "./components/Track";
 import type { Athlete, TestConfig, TrackPosition } from "./types";
-import { AudioService } from "./utils/audio";
+import type { AudioService } from "./utils/audio";
 import { calculateIntervalTime } from "./utils/timing";
 
 function App() {
