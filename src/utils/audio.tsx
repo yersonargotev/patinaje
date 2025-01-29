@@ -1,88 +1,90 @@
-import { Howl } from "howler";
+import { convertFileSrc } from "@tauri-apps/api/core";
+import { resourceDir } from "@tauri-apps/api/path";
 
 export class AudioService {
-	private sounds: {
-		workStart: Howl;
-		workComplete: Howl;
-		recoveryStart: Howl;
-		recoveryComplete: Howl;
-		intervalBeep: Howl;
-	};
+	private audioElements: { [key: string]: HTMLAudioElement } = {};
+	private initialized = false;
 
 	constructor() {
-		// Inicializar todos los sonidos con las rutas correctas
-		this.sounds = {
-			workStart: new Howl({
-				src: ["/assets/work-start.mp3"],
-				volume: 0.8,
-				preload: true,
-			}),
-			workComplete: new Howl({
-				src: ["/assets/work-complete.mp3"],
-				volume: 0.8,
-				preload: true,
-				format: ["mp3"],
-			}),
-			recoveryStart: new Howl({
-				src: ["/assets/recovery-start.mp3"],
-				volume: 0.8,
-				preload: true,
-				format: ["mp3"],
-			}),
-			recoveryComplete: new Howl({
-				src: ["/assets/recovery-complete.mp3"],
-				volume: 0.8,
-				preload: true,
-				format: ["mp3"],
-			}),
-			intervalBeep: new Howl({
-				src: ["/assets/pi.mp3"],
-				volume: 0.8,
-				preload: true,
-				format: ["mp3"],
-			}),
-		};
+		this.initializeAudio();
 	}
 
-	announceWorkStart(period: number) {
-		this.stopAll();
-		this.sounds.workStart.play();
+	private async initializeAudio() {
+		if (this.initialized) return;
+
+		const sounds = [
+			"work-start",
+			"work-complete",
+			"recovery-start",
+			"recovery-complete",
+			"pi",
+		];
+
+		// Check if we're running in Tauri
+		const isTauri = "window.__TAURI__" in window;
+
+		for (const sound of sounds) {
+			const audio = new Audio();
+
+			if (isTauri) {
+				// Use resource dir for Tauri
+				const resourcePath = await resourceDir();
+				const assetUrl = convertFileSrc(`${resourcePath}/${sound}.mp3`);
+				audio.src = assetUrl;
+			} else {
+				// Use web assets for browser
+				audio.src = `/assets/${sound}.mp3`;
+			}
+
+			// Enable playing multiple sounds simultaneously
+			audio.preload = "auto";
+			this.audioElements[sound] = audio;
+		}
+
+		this.initialized = true;
 	}
 
-	announceWorkComplete() {
-		this.stopAll();
-		this.sounds.workComplete.play();
+	private async playSound(soundName: string) {
+		await this.initializeAudio();
+		const audio = this.audioElements[soundName];
+		if (audio) {
+			audio.currentTime = 0;
+			await audio.play();
+		}
 	}
 
-	announceRecoveryStart() {
-		this.stopAll();
-		this.sounds.recoveryStart.play();
+	async announceWorkStart(period: number) {
+		await this.stopAll();
+		await this.playSound("work-start");
 	}
 
-	announceRecoveryComplete() {
-		this.stopAll();
-		this.sounds.recoveryComplete.play();
+	async announceWorkComplete() {
+		await this.stopAll();
+		await this.playSound("work-complete");
 	}
 
-	playIntervalBeep() {
-		this.sounds.intervalBeep.play();
+	async announceRecoveryStart() {
+		await this.stopAll();
+		await this.playSound("recovery-start");
 	}
 
-	private stopAll() {
-		Object.values(this.sounds).forEach((sound) => sound.stop());
+	async announceRecoveryComplete() {
+		await this.stopAll();
+		await this.playSound("recovery-complete");
+	}
+
+	async playIntervalBeep() {
+		await this.playSound("pi");
+	}
+
+	private async stopAll() {
+		Object.values(this.audioElements).forEach((audio) => {
+			audio.pause();
+			audio.currentTime = 0;
+		});
 	}
 
 	async preloadAll(): Promise<void> {
-		const loadPromises = Object.values(this.sounds).map((sound) => {
-			return new Promise<void>((resolve, reject) => {
-				sound.once("load", () => resolve());
-				sound.once("loaderror", (error) => {
-					console.error("Error loading sound:", error);
-					reject(error);
-				});
-			});
-		});
-
-		await Promise.all(loadPromises);
+		await this.initializeAudio();
 	}
 }
