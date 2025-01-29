@@ -1,57 +1,74 @@
+import { Howl } from "howler";
+
 export class AudioService {
-	private speechSynthesis: SpeechSynthesis;
-	private voice: SpeechSynthesisVoice | null = null;
+	private sounds: {
+		workStart: Howl;
+		workComplete: Howl;
+		recoveryStart: Howl;
+		recoveryComplete: Howl;
+	};
 
 	constructor() {
-		this.speechSynthesis = window.speechSynthesis;
-
-		// Initialize voice when voices are loaded
-		if (speechSynthesis.onvoiceschanged !== undefined) {
-			speechSynthesis.onvoiceschanged = () => {
-				this.initializeVoice();
-			};
-		}
-
-		this.initializeVoice();
-	}
-
-	private initializeVoice() {
-		const voices = this.speechSynthesis.getVoices();
-		// Try to find a neutral English voice
-		this.voice =
-			voices.find(
-				(voice) =>
-					voice.lang.startsWith("en-") &&
-					!voice.name.toLowerCase().includes("zira"),
-			) || voices[0];
-	}
-
-	private speak(text: string, rate: number = 1, pitch: number = 1) {
-		// Cancel any ongoing speech
-		this.speechSynthesis.cancel();
-
-		const utterance = new SpeechSynthesisUtterance(text);
-		utterance.voice = this.voice;
-		utterance.rate = rate;
-		utterance.pitch = pitch;
-		utterance.volume = 0.8; // Slightly reduced volume
-
-		this.speechSynthesis.speak(utterance);
+		// Inicializar todos los sonidos
+		this.sounds = {
+			workStart: new Howl({
+				src: ["assets/work-start.mp3"],
+				volume: 0.8,
+				preload: true,
+			}),
+			workComplete: new Howl({
+				src: ["assets/work-complete.mp3"],
+				volume: 0.8,
+				preload: true,
+			}),
+			recoveryStart: new Howl({
+				src: ["assets/recovery-start.mp3"],
+				volume: 0.8,
+				preload: true,
+			}),
+			recoveryComplete: new Howl({
+				src: ["assets/recovery-complete.mp3"],
+				volume: 0.8,
+				preload: true,
+			}),
+		};
 	}
 
 	announceWorkStart(period: number) {
-		this.speak(`Period ${period} starting`);
+		// Detener cualquier sonido actual
+		this.stopAll();
+		// Reproducir el sonido de inicio de trabajo
+		this.sounds.workStart.play();
 	}
 
 	announceWorkComplete() {
-		this.speak("Period complete");
+		this.stopAll();
+		this.sounds.workComplete.play();
 	}
 
 	announceRecoveryStart() {
-		this.speak("Recovery starting");
+		this.stopAll();
+		this.sounds.recoveryStart.play();
 	}
 
 	announceRecoveryComplete() {
-		this.speak("Recovery complete");
+		this.stopAll();
+		this.sounds.recoveryComplete.play();
+	}
+
+	private stopAll() {
+		Object.values(this.sounds).forEach((sound) => sound.stop());
+	}
+
+	// Método para cargar todos los sonidos de manera asíncrona
+	async preloadAll(): Promise<void> {
+		const loadPromises = Object.values(this.sounds).map((sound) => {
+			return new Promise<void>((resolve, reject) => {
+				sound.once("load", () => resolve());
+				sound.once("loaderror", () => reject());
+			});
+		});
+
+		await Promise.all(loadPromises);
 	}
 }

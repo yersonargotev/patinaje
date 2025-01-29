@@ -6,6 +6,7 @@ import { StatusDisplay } from "./components/StatusDisplay";
 import { Timer } from "./components/Timer";
 import { Track } from "./components/Track";
 import type { Athlete, TestConfig, TrackPosition } from "./types";
+import { AudioService } from "./utils/audio";
 import { calculateIntervalTime } from "./utils/timing";
 
 function App() {
@@ -30,14 +31,17 @@ function App() {
 	const [isRecovery, setIsRecovery] = useState(false);
 	const [workTime, setWorkTime] = useState(0);
 	const [recoveryTime, setRecoveryTime] = useState(0);
-	// const audioService = useRef<AudioService>();
+	const audioService = useRef<AudioService>();
 	const recoveryTimer = useRef<number>();
 	const workTimer = useRef<number>();
 	const recoveryCountdown = useRef<number>();
 
-	// useEffect(() => {
-	// 	audioService.current = new AudioService();
-	// }, []);
+	useEffect(() => {
+		// Precargar todos los sonidos
+		audioService.current?.preloadAll().catch((error) => {
+			console.error("Error loading audio files:", error);
+		});
+	}, []);
 
 	useEffect(() => {
 		let timer: number;
@@ -59,7 +63,7 @@ function App() {
 
 					if (newLap === 0 && newSegment === 0) {
 						// Period completed
-						// audioService.current?.announceWorkComplete();
+						audioService.current?.announceWorkComplete();
 						setIsRecovery(true);
 						return { period: prev.period + 1, lap: 0, segment: 0 };
 					}
@@ -81,7 +85,7 @@ function App() {
 			setRecoveryTime(config.recoveryTime);
 
 			// Start recovery countdown
-			// audioService.current?.announceRecoveryStart();
+			audioService.current?.announceRecoveryStart();
 
 			recoveryCountdown.current = window.setInterval(() => {
 				setRecoveryTime((t) => {
@@ -94,9 +98,9 @@ function App() {
 			}, 1000);
 
 			recoveryTimer.current = window.setTimeout(() => {
-				// audioService.current?.announceRecoveryComplete();
+				audioService.current?.announceRecoveryComplete();
 				setIsRecovery(false);
-				// audioService.current?.announceWorkStart(position.period);
+				audioService.current?.announceWorkStart(position.period);
 				if (recoveryCountdown.current) clearInterval(recoveryCountdown.current);
 			}, config.recoveryTime * 1000);
 
@@ -110,13 +114,13 @@ function App() {
 		config.isRunning,
 		config.isPaused,
 		config.recoveryTime,
-		// position.period,
+		position.period,
 	]);
 
 	const handleStart = () => {
 		setConfig((c) => ({ ...c, isRunning: true, isPaused: false }));
 		if (!isRecovery) {
-			// audioService.current?.announceWorkStart(position.period);
+			audioService.current?.announceWorkStart(position.period);
 		}
 	};
 
