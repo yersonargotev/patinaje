@@ -46,7 +46,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
 						<select
 							value={config.currentPeriod}
 							onChange={(e) => onPeriodChange(Number(e.target.value))}
-							className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200"
+							className="mt-1 block w-full rounded-md border-gray-300 py-2 px-3 bg-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
 						>
 							{Array(21)
 								.fill(0)
@@ -68,7 +68,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
 							onChange={(e) => onRecoveryTimeChange(Number(e.target.value))}
 							min={15}
 							max={120}
-							className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200"
+							className="mt-1 block w-full rounded-md border-gray-300 py-2 px-3 bg-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
 						/>
 					</div>
 
