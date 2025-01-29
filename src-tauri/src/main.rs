@@ -1,10 +1,10 @@
 mod audio;
 
-use audio::AudioPlayer;
+use audio::ThreadSafeAudioPlayer;
 use std::sync::Arc;
 use tauri::State;
 
-struct AudioState(Arc<AudioPlayer>);
+struct AudioState(Arc<ThreadSafeAudioPlayer>);
 
 #[tauri::command]
 async fn play_sound(sound_type: String, state: State<'_, AudioState>) -> Result<(), String> {
@@ -17,7 +17,7 @@ async fn stop_all_sounds(state: State<'_, AudioState>) -> Result<(), String> {
 }
 
 fn main() {
-    let audio_player = AudioPlayer::new().expect("Failed to initialize audio player");
+    let audio_player = ThreadSafeAudioPlayer::new();
     let audio_state = AudioState(Arc::new(audio_player));
 
     tauri::Builder::default()
