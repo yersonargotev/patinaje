@@ -16,26 +16,32 @@ async fn save_evaluation_data(
     athlete: Athlete,
     completed_periods: String,
     total_time: i32,
+    status: String,
     db_state: State<'_, DbState>,
-) -> Result<i64, String> {
-    // Save athlete first
-    let athlete_id = db_state
-        .0
-        .save_athlete(&athlete)
-        .map_err(|e| e.to_string())?;
-
-    // Create and save evaluation
+) -> Result<String, String> {
     let evaluation = Evaluation {
         id: None,
-        athlete_id,
+        athlete_id: 0,  // Will be set by the database
         completed_periods,
         total_time,
         date: chrono::Local::now().to_rfc3339(),
+        status,
     };
 
+    match db_state.0.save_evaluation_data(&athlete, &evaluation) {
+        Ok((athlete_id, eval_id)) => Ok(format!("Saved evaluation {} for athlete {}", eval_id, athlete_id)),
+        Err(e) => Err(e.to_string()),
+    }
+}
+
+#[tauri::command]
+async fn get_athlete_evaluations(
+    athlete_id: i64,
+    db_state: State<'_, DbState>,
+) -> Result<Vec<Evaluation>, String> {
     db_state
         .0
-        .save_evaluation(&evaluation)
+        .get_athlete_evaluations(athlete_id)
         .map_err(|e| e.to_string())
 }
 
@@ -64,7 +70,8 @@ fn main() {
         .invoke_handler(tauri::generate_handler![
             play_sound,
             stop_all_sounds,
-            save_evaluation_data
+            save_evaluation_data,
+            get_athlete_evaluations
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

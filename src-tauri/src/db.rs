@@ -1,8 +1,9 @@
 use rusqlite::{Connection, Result};
 use serde::{Deserialize, Serialize};
 use std::sync::Mutex;
+use chrono::NaiveDateTime;
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Athlete {
     pub id: Option<i64>,
     pub name: String,
@@ -11,13 +12,14 @@ pub struct Athlete {
     pub height: f32,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Evaluation {
     pub id: Option<i64>,
     pub athlete_id: i64,
-    pub completed_periods: String, // JSON array as string
-    pub total_time: i32,          // in seconds
-    pub date: String,             // ISO date string
+    pub completed_periods: String,
+    pub total_time: i32,
+    pub date: String,
+    pub status: String,
 }
 
 pub struct Database {
@@ -33,9 +35,9 @@ impl Database {
             "CREATE TABLE IF NOT EXISTS athletes (
                 id INTEGER PRIMARY KEY,
                 name TEXT NOT NULL,
-                age INTEGER NOT NULL,
-                weight REAL NOT NULL,
-                height REAL NOT NULL
+                age INTEGER NOT NULL CHECK (age > 0 AND age < 150),
+                weight REAL NOT NULL CHECK (weight > 0),
+                height REAL NOT NULL CHECK (height > 0)
             )",
             [],
         )?;
@@ -47,6 +49,7 @@ impl Database {
                 completed_periods TEXT NOT NULL,
                 total_time INTEGER NOT NULL,
                 date TEXT NOT NULL,
+                status TEXT NOT NULL CHECK (status IN ('completed', 'cancelled')),
                 FOREIGN KEY (athlete_id) REFERENCES athletes (id)
             )",
             [],
@@ -57,9 +60,12 @@ impl Database {
         })
     }
 
-    pub fn save_athlete(&self, athlete: &Athlete) -> Result<i64> {
-        let conn = self.connection.lock().unwrap();
-        conn.execute(
+    pub fn save_evaluation_data(&self, athlete: &Athlete, evaluation: &Evaluation) -> Result<(i64, i64)> {
+        let mut conn = self.connection.lock().unwrap();
+        let tx = conn.transaction()?;
+        
+        // Save athlete
+        tx.execute(
             "INSERT INTO athletes (name, age, weight, height) VALUES (?1, ?2, ?3, ?4)",
             [
                 &athlete.name,
@@ -68,21 +74,55 @@ impl Database {
                 &athlete.height.to_string(),
             ],
         )?;
-        Ok(conn.last_insert_rowid())
-    }
+        
+        let athlete_id = tx.last_insert_rowid();
+        
+        // Validate date format
+        if NaiveDateTime::parse_from_str(&evaluation.date, "%Y-%m-%dT%H:%M:%S%.f%z").is_err() {
+            return Err(rusqlite::Error::InvalidParameterName("Invalid date format".into()));
+        }
 
-    pub fn save_evaluation(&self, evaluation: &Evaluation) -> Result<i64> {
-        let conn = self.connection.lock().unwrap();
-        conn.execute(
-            "INSERT INTO evaluations (athlete_id, completed_periods, total_time, date) 
-             VALUES (?1, ?2, ?3, ?4)",
+        // Save evaluation with the new athlete_id
+        tx.execute(
+            "INSERT INTO evaluations (athlete_id, completed_periods, total_time, date, status) 
+             VALUES (?1, ?2, ?3, ?4, ?5)",
             [
-                &evaluation.athlete_id.to_string(),
+                &athlete_id.to_string(),
                 &evaluation.completed_periods,
                 &evaluation.total_time.to_string(),
                 &evaluation.date,
+                &evaluation.status,
             ],
         )?;
-        Ok(conn.last_insert_rowid())
+        
+        let eval_id = tx.last_insert_rowid();
+        
+        // Commit the transaction
+        tx.commit()?;
+        
+        Ok((athlete_id, eval_id))
+    }
+
+    pub fn get_athlete_evaluations(&self, athlete_id: i64) -> Result<Vec<Evaluation>> {
+        let conn = self.connection.lock().unwrap();
+        let mut stmt = conn.prepare(
+            "SELECT id, athlete_id, completed_periods, total_time, date, status 
+             FROM evaluations 
+             WHERE athlete_id = ?1 
+             ORDER BY date DESC"
+        )?;
+
+        let evals = stmt.query_map([athlete_id], |row| {
+            Ok(Evaluation {
+                id: Some(row.get(0)?),
+                athlete_id: row.get(1)?,
+                completed_periods: row.get(2)?,
+                total_time: row.get(3)?,
+                date: row.get(4)?,
+                status: row.get(5)?,
+            })
+        })?;
+
+        evals.collect()
     }
 }
