@@ -47,7 +47,9 @@ function App() {
 
 	const audioService = useRef<AudioService>(new AudioService());
 	const workTimer = useRef<number>();
+	const recoveryTimer = useRef<number>();
 	const totalTimeInterval = useRef<number>();
+	const isStartingRef = useRef(false);
 
 	useEffect(() => {
 		audioService.current.preloadAll().catch((error) => {
@@ -58,8 +60,43 @@ function App() {
 			if (totalTimeInterval.current) {
 				clearInterval(totalTimeInterval.current);
 			}
+			if (recoveryTimer.current) {
+				clearTimeout(recoveryTimer.current);
+			}
 		};
 	}, []);
+
+	// Temporizador de recuperación
+	useEffect(() => {
+        const startRecovery = async () => {
+            if (isStartingRef.current) return;
+            isStartingRef.current = true;
+
+            try {
+                // Reproducir cuenta regresiva para recuperación
+                await audioService.current?.playCountdown();
+                await audioService.current?.announceRecoveryStart();
+
+                // Iniciar el temporizador de recuperación después de la cuenta regresiva
+                recoveryTimer.current = window.setTimeout(() => {
+                    setIsRecovery(false);
+                    audioService.current?.announceRecoveryComplete();
+                }, config.recoveryTime * 1000);
+            } finally {
+                isStartingRef.current = false;
+            }
+        };
+
+        if (isRecovery && config.isRunning && !config.isPaused) {
+            startRecovery();
+        }
+
+        return () => {
+            if (recoveryTimer.current) {
+                clearTimeout(recoveryTimer.current);
+            }
+        };
+    }, [isRecovery, config.isRunning, config.isPaused, config.recoveryTime]);
 
 	useEffect(() => {
 		if (config.isRunning && !config.isPaused && !config.isFinished) {
@@ -154,6 +191,7 @@ function App() {
 					},
 					completedPeriods: JSON.stringify(athlete.completedPeriods),
 					totalTime,
+					status: "completed",
 				});
 			} catch (error) {
 				console.error(`Error saving data for athlete ${athlete.name}:`, error);
@@ -161,12 +199,23 @@ function App() {
 		}
 	};
 
-	const handleStart = () => {
-		setConfig((c) => ({ ...c, isRunning: true, isPaused: false }));
-		if (!isRecovery) {
-			audioService.current?.announceWorkStart();
-		}
-	};
+	const handleStart = async () => {
+        if (isStartingRef.current) return;
+        isStartingRef.current = true;
+
+        try {
+            if (!isRecovery) {
+                // Reproducir cuenta regresiva y esperar a que termine
+                await audioService.current?.playCountdown();
+                // Reproducir sonido de inicio
+                await audioService.current?.announceWorkStart();
+                // Ahora sí iniciar el tiempo
+                setConfig((c) => ({ ...c, isRunning: true, isPaused: false }));
+            }
+        } finally {
+            isStartingRef.current = false;
+        }
+    };
 
 	const handlePause = () => {
 		setConfig((c) => ({ ...c, isPaused: true }));
