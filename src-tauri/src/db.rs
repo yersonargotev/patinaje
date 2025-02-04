@@ -1,7 +1,9 @@
+use chrono::NaiveDateTime;
+use csv::Writer;
 use rusqlite::{Connection, Result};
 use serde::{Deserialize, Serialize};
+use std::path::Path;
 use std::sync::Mutex;
-use chrono::NaiveDateTime;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Athlete {
@@ -29,7 +31,7 @@ pub struct Database {
 impl Database {
     pub fn new() -> Result<Self> {
         let conn = Connection::open("patinaje.db")?;
-        
+
         // Create tables if they don't exist
         conn.execute(
             "CREATE TABLE IF NOT EXISTS athletes (
@@ -60,10 +62,14 @@ impl Database {
         })
     }
 
-    pub fn save_evaluation_data(&self, athlete: &Athlete, evaluation: &Evaluation) -> Result<(i64, i64)> {
+    pub fn save_evaluation_data(
+        &self,
+        athlete: &Athlete,
+        evaluation: &Evaluation,
+    ) -> Result<(i64, i64)> {
         let mut conn = self.connection.lock().unwrap();
         let tx = conn.transaction()?;
-        
+
         // Save athlete
         tx.execute(
             "INSERT INTO athletes (name, age, weight, height) VALUES (?1, ?2, ?3, ?4)",
@@ -74,12 +80,14 @@ impl Database {
                 &athlete.height.to_string(),
             ],
         )?;
-        
+
         let athlete_id = tx.last_insert_rowid();
-        
+
         // Validate date format
         if NaiveDateTime::parse_from_str(&evaluation.date, "%Y-%m-%dT%H:%M:%S%.f%z").is_err() {
-            return Err(rusqlite::Error::InvalidParameterName("Invalid date format".into()));
+            return Err(rusqlite::Error::InvalidParameterName(
+                "Invalid date format".into(),
+            ));
         }
 
         // Save evaluation with the new athlete_id
@@ -94,12 +102,12 @@ impl Database {
                 &evaluation.status,
             ],
         )?;
-        
+
         let eval_id = tx.last_insert_rowid();
-        
+
         // Commit the transaction
         tx.commit()?;
-        
+
         Ok((athlete_id, eval_id))
     }
 
@@ -109,7 +117,7 @@ impl Database {
             "SELECT id, athlete_id, completed_periods, total_time, date, status 
              FROM evaluations 
              WHERE athlete_id = ?1 
-             ORDER BY date DESC"
+             ORDER BY date DESC",
         )?;
 
         let evals = stmt.query_map([athlete_id], |row| {
@@ -124,5 +132,111 @@ impl Database {
         })?;
 
         evals.collect()
+    }
+
+    pub fn export_all_evaluations_to_csv<P: AsRef<Path>>(
+        &self,
+        path: P,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        let conn = self.connection.lock().unwrap();
+        let mut stmt = conn.prepare(
+            "SELECT e.id, e.athlete_id, a.name, e.completed_periods, e.total_time, e.date, e.status 
+             FROM evaluations e 
+             JOIN athletes a ON e.athlete_id = a.id 
+             ORDER BY e.date DESC"
+        )?;
+
+        let mut wtr = Writer::from_path(path)?;
+        wtr.write_record(&[
+            "ID",
+            "Atleta ID",
+            "Nombre del Atleta",
+            "Periodos Completados",
+            "Tiempo Total (s)",
+            "Fecha",
+            "Estado",
+        ])?;
+
+        let rows = stmt.query_map([], |row| {
+            Ok((
+                row.get::<_, i64>(0)?,
+                row.get::<_, i64>(1)?,
+                row.get::<_, String>(2)?,
+                row.get::<_, String>(3)?,
+                row.get::<_, i32>(4)?,
+                row.get::<_, String>(5)?,
+                row.get::<_, String>(6)?,
+            ))
+        })?;
+
+        for row in rows {
+            let (id, athlete_id, name, periods, time, date, status) = row?;
+            wtr.write_record(&[
+                id.to_string(),
+                athlete_id.to_string(),
+                name,
+                periods,
+                time.to_string(),
+                date,
+                status,
+            ])?;
+        }
+
+        wtr.flush()?;
+        Ok(())
+    }
+
+    pub fn export_athlete_evaluations_to_csv<P: AsRef<Path>>(
+        &self,
+        athlete_id: i64,
+        path: P,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        let conn = self.connection.lock().unwrap();
+        let mut stmt = conn.prepare(
+            "SELECT e.id, e.athlete_id, a.name, e.completed_periods, e.total_time, e.date, e.status 
+             FROM evaluations e 
+             JOIN athletes a ON e.athlete_id = a.id 
+             WHERE e.athlete_id = ?1
+             ORDER BY e.date DESC"
+        )?;
+
+        let mut wtr = Writer::from_path(path)?;
+        wtr.write_record(&[
+            "ID",
+            "Atleta ID",
+            "Nombre del Atleta",
+            "Periodos Completados",
+            "Tiempo Total (s)",
+            "Fecha",
+            "Estado",
+        ])?;
+
+        let rows = stmt.query_map([athlete_id], |row| {
+            Ok((
+                row.get::<_, i64>(0)?,
+                row.get::<_, i64>(1)?,
+                row.get::<_, String>(2)?,
+                row.get::<_, String>(3)?,
+                row.get::<_, i32>(4)?,
+                row.get::<_, String>(5)?,
+                row.get::<_, String>(6)?,
+            ))
+        })?;
+
+        for row in rows {
+            let (id, athlete_id, name, periods, time, date, status) = row?;
+            wtr.write_record(&[
+                id.to_string(),
+                athlete_id.to_string(),
+                name,
+                periods,
+                time.to_string(),
+                date,
+                status,
+            ])?;
+        }
+
+        wtr.flush()?;
+        Ok(())
     }
 }

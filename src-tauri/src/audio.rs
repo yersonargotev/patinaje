@@ -17,7 +17,7 @@ impl ThreadSafeAudioPlayer {
         let (tx, rx) = channel::<AudioCommand>();
         let sender = Arc::new(Mutex::new(Some(tx)));
         let player_sender = sender.clone();
-        
+
         let thread_app_handle = app_handle.clone();
 
         std::thread::spawn(move || {
@@ -52,18 +52,22 @@ impl ThreadSafeAudioPlayer {
                                             // Detener cualquier sonido actual
                                             sink.stop();
                                             sink.set_volume(1.0);
-                                            
+
                                             // Reproducir el nuevo sonido inmediatamente
                                             sink.append(source);
                                             sink.play();
-                                            
+
                                             // Esperar un pequeño momento para asegurar que el audio comience
                                             std::thread::sleep(Duration::from_millis(50));
                                         }
-                                        Err(e) => eprintln!("Error decoding audio {}: {}", sound_type, e),
+                                        Err(e) => {
+                                            eprintln!("Error decoding audio {}: {}", sound_type, e)
+                                        }
                                     }
                                 }
-                                Err(e) => eprintln!("Error opening audio file {}: {}", sound_type, e),
+                                Err(e) => {
+                                    eprintln!("Error opening audio file {}: {}", sound_type, e)
+                                }
                             }
                         }
                     }
