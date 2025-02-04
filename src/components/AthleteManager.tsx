@@ -32,7 +32,7 @@ export const AthleteManager: React.FC<AthleteManagerProps> = ({
 										onAthleteUpdate({ ...athlete, name: e.target.value })
 									}
 									placeholder={`Athlete ${athlete.id}`}
-									className="bg-transparent border-none focus:ring-0"
+									className="bg-transparent focus:ring-0 border-1 border-gray-300 rounded-md px-2 py-1"
 								/>
 							</div>
 
@@ -50,7 +50,7 @@ export const AthleteManager: React.FC<AthleteManagerProps> = ({
 												age: Number.parseInt(e.target.value),
 											})
 										}
-										className="w-full rounded-md border-gray-300"
+										className="w-full rounded-md border-1 border-gray-300"
 									/>
 								</div>
 
@@ -71,12 +71,15 @@ export const AthleteManager: React.FC<AthleteManagerProps> = ({
 												weight: Number.parseFloat(e.target.value),
 											})
 										}
-										className="w-full rounded-md border-gray-300"
+										className="w-full rounded-md border-1 border-gray-300"
 									/>
 								</div>
 
 								<div>
-									<label className="block text-sm text-gray-500">
+									<label
+										className="block text-sm text-gray-500"
+										htmlFor="height"
+									>
 										Height (cm)
 									</label>
 									<input
@@ -85,10 +88,10 @@ export const AthleteManager: React.FC<AthleteManagerProps> = ({
 										onChange={(e) =>
 											onAthleteUpdate({
 												...athlete,
-												height: parseFloat(e.target.value),
+												height: Number.parseFloat(e.target.value),
 											})
 										}
-										className="w-full rounded-md border-gray-300"
+										className="w-full rounded-md border-1 border-gray-300"
 									/>
 								</div>
 							</div>
@@ -99,6 +102,7 @@ export const AthleteManager: React.FC<AthleteManagerProps> = ({
 										Completed: {athlete.completedPeriods.length}
 									</span>
 									<button
+										type="button"
 										onClick={() => setSelectedAthleteId(athlete.id ?? null)}
 										className="text-sm text-blue-600 hover:text-blue-800"
 									>
@@ -106,6 +110,7 @@ export const AthleteManager: React.FC<AthleteManagerProps> = ({
 									</button>
 								</div>
 								<button
+									type="button"
 									onClick={() =>
 										onAthleteUpdate({ ...athlete, active: !athlete.active })
 									}
