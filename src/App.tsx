@@ -10,6 +10,7 @@ import { Track } from "./components/Track";
 import type { Athlete, TestConfig, TrackPosition } from "./types";
 import { AudioService } from "./utils/audio";
 import { calculateIntervalTime } from "./utils/timing";
+import { Toaster, toast } from "sonner";
 
 function App() {
 	const [config, setConfig] = useState<TestConfig>({
@@ -68,35 +69,35 @@ function App() {
 
 	// Temporizador de recuperación
 	useEffect(() => {
-        const startRecovery = async () => {
-            if (isStartingRef.current) return;
-            isStartingRef.current = true;
+		const startRecovery = async () => {
+			if (isStartingRef.current) return;
+			isStartingRef.current = true;
 
-            try {
-                // Reproducir cuenta regresiva para recuperación
-                await audioService.current?.playCountdown();
-                await audioService.current?.announceRecoveryStart();
+			try {
+				// Reproducir cuenta regresiva para recuperación
+				await audioService.current?.playCountdown();
+				await audioService.current?.announceRecoveryStart();
 
-                // Iniciar el temporizador de recuperación después de la cuenta regresiva
-                recoveryTimer.current = window.setTimeout(() => {
-                    setIsRecovery(false);
-                    audioService.current?.announceRecoveryComplete();
-                }, config.recoveryTime * 1000);
-            } finally {
-                isStartingRef.current = false;
-            }
-        };
+				// Iniciar el temporizador de recuperación después de la cuenta regresiva
+				recoveryTimer.current = window.setTimeout(() => {
+					setIsRecovery(false);
+					audioService.current?.announceRecoveryComplete();
+				}, config.recoveryTime * 1000);
+			} finally {
+				isStartingRef.current = false;
+			}
+		};
 
-        if (isRecovery && config.isRunning && !config.isPaused) {
-            startRecovery();
-        }
+		if (isRecovery && config.isRunning && !config.isPaused) {
+			startRecovery();
+		}
 
-        return () => {
-            if (recoveryTimer.current) {
-                clearTimeout(recoveryTimer.current);
-            }
-        };
-    }, [isRecovery, config.isRunning, config.isPaused, config.recoveryTime]);
+		return () => {
+			if (recoveryTimer.current) {
+				clearTimeout(recoveryTimer.current);
+			}
+		};
+	}, [isRecovery, config.isRunning, config.isPaused, config.recoveryTime]);
 
 	useEffect(() => {
 		if (config.isRunning && !config.isPaused && !config.isFinished) {
@@ -200,22 +201,35 @@ function App() {
 	};
 
 	const handleStart = async () => {
-        if (isStartingRef.current) return;
-        isStartingRef.current = true;
+		if (isStartingRef.current) return;
 
-        try {
-            if (!isRecovery) {
-                // Reproducir cuenta regresiva y esperar a que termine
-                await audioService.current?.playCountdown();
-                // Reproducir sonido de inicio
-                await audioService.current?.announceWorkStart();
-                // Ahora sí iniciar el tiempo
-                setConfig((c) => ({ ...c, isRunning: true, isPaused: false }));
-            }
-        } finally {
-            isStartingRef.current = false;
-        }
-    };
+		// Check if any active athlete is missing a name
+		const hasUnnamedAthletes = athletes
+			.filter((a) => a.active)
+			.some((athlete) => !athlete.name.trim());
+
+		if (hasUnnamedAthletes) {
+			toast.error(
+				"Por favor ingrese el nombre de todos los deportistas activos antes de iniciar.",
+			);
+			return;
+		}
+
+		isStartingRef.current = true;
+
+		try {
+			if (!isRecovery) {
+				// Reproducir cuenta regresiva y esperar a que termine
+				await audioService.current?.playCountdown();
+				// Reproducir sonido de inicio
+				await audioService.current?.announceWorkStart();
+				// Ahora sí iniciar el tiempo
+				setConfig((c) => ({ ...c, isRunning: true, isPaused: false }));
+			}
+		} finally {
+			isStartingRef.current = false;
+		}
+	};
 
 	const handlePause = () => {
 		setConfig((c) => ({ ...c, isPaused: true }));
@@ -312,6 +326,7 @@ function App() {
 					onCancel={() => setShowFinishModal(false)}
 				/>
 			</div>
+			<Toaster position="top-center" richColors />
 		</div>
 	);
 }

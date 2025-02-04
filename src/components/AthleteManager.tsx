@@ -25,15 +25,27 @@ export const AthleteManager: React.FC<AthleteManagerProps> = ({
 						<div className="flex flex-col space-y-2 p-4 bg-gray-50 rounded-md">
 							<div className="flex items-center">
 								<User className="w-5 h-5 mr-2 text-gray-500" />
-								<input
-									type="text"
-									value={athlete.name}
-									onChange={(e) =>
-										onAthleteUpdate({ ...athlete, name: e.target.value })
-									}
-									placeholder={`Athlete ${athlete.id}`}
-									className="bg-transparent focus:ring-0 border-1 border-gray-300 rounded-md px-2 py-1"
-								/>
+								<div className="flex-1">
+									<input
+										type="text"
+										value={athlete.name}
+										onChange={(e) =>
+											onAthleteUpdate({ ...athlete, name: e.target.value })
+										}
+										placeholder={`Nombre del deportista ${athlete.id} *`}
+										className={`w-full bg-transparent focus:ring-0 border-1 ${
+											athlete.active && !athlete.name.trim()
+												? "border-red-300 focus:border-red-500"
+												: "border-gray-300"
+										} rounded-md px-2 py-1`}
+										required={athlete.active}
+									/>
+									{athlete.active && !athlete.name.trim() && (
+										<p className="text-red-500 text-xs mt-1">
+											El nombre es requerido para deportistas activos
+										</p>
+									)}
+								</div>
 							</div>
 
 							<div className="grid grid-cols-3 gap-2">
