@@ -89,6 +89,7 @@ async fn export_athlete_evaluations(
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_sql::Builder::default().build())
         .setup(|app| {
             let app_handle = app.handle().clone();
             let audio_player = ThreadSafeAudioPlayer::new(app_handle.clone());
