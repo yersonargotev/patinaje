@@ -1,15 +1,23 @@
 mod audio;
 mod db;
+mod models;
+mod services;
 
 use audio::ThreadSafeAudioPlayer;
-use db::{Athlete, Database, Evaluation};
+use db::Database;
+use models::{Athlete, Evaluation};
+use services::evaluation_service::EvaluationService;
 use std::path::PathBuf;
 use std::sync::Arc;
 use tauri::Manager;
 use tauri::State;
 
+#[allow(dead_code)]
 struct AudioState(Arc<ThreadSafeAudioPlayer>);
+#[allow(dead_code)]
 struct DbState(Arc<Database>);
+#[allow(dead_code)]
+struct ServiceState(Arc<EvaluationService>);
 
 #[tauri::command]
 async fn save_evaluation_data(
@@ -17,40 +25,36 @@ async fn save_evaluation_data(
     completed_periods: String,
     total_time: i32,
     status: String,
-    db_state: State<'_, DbState>,
+    state: State<'_, ServiceState>,
 ) -> Result<String, String> {
-    let evaluation = Evaluation {
-        id: None,
-        athlete_id: 0, // Will be set by the database
+    let evaluation = Evaluation::new(
+        None,
+        0,
         completed_periods,
         total_time,
-        date: chrono::Local::now().to_rfc3339(),
         status,
-    };
+    );
 
-    match db_state.0.save_evaluation_data(&athlete, &evaluation) {
-        Ok((athlete_id, eval_id)) => Ok(format!(
-            "Saved evaluation {} for athlete {}",
-            eval_id, athlete_id
-        )),
-        Err(e) => Err(e.to_string()),
-    }
+    state.0.save_evaluation(athlete, evaluation)
+        .await
+        .map(|(athlete_id, eval_id)| {
+            format!("Saved evaluation {} for athlete {}", eval_id, athlete_id)
+        })
+        .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 async fn get_athlete_evaluations(
     athlete_id: i64,
-    db_state: State<'_, DbState>,
+    state: State<'_, ServiceState>,
 ) -> Result<Vec<Evaluation>, String> {
-    db_state
-        .0
-        .get_athlete_evaluations(athlete_id)
+    state.0.get_athlete_evaluations(athlete_id)
+        .await
         .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 async fn play_sound(sound_type: String, state: State<'_, AudioState>) -> Result<(), String> {
-    println!("Command received to play sound: {}", sound_type);
     state.0.play_sound(&sound_type).map_err(|e| e.to_string())
 }
 
@@ -62,11 +66,10 @@ async fn stop_all_sounds(state: State<'_, AudioState>) -> Result<(), String> {
 #[tauri::command]
 async fn export_all_evaluations(
     path: PathBuf,
-    db_state: State<'_, DbState>,
+    state: State<'_, ServiceState>,
 ) -> Result<String, String> {
-    db_state
-        .0
-        .export_all_evaluations_to_csv(path)
+    state.0.export_all_evaluations(path)
+        .await
         .map(|_| "Evaluaciones exportadas exitosamente".to_string())
         .map_err(|e| e.to_string())
 }
@@ -75,11 +78,10 @@ async fn export_all_evaluations(
 async fn export_athlete_evaluations(
     athlete_id: i64,
     path: PathBuf,
-    db_state: State<'_, DbState>,
+    state: State<'_, ServiceState>,
 ) -> Result<String, String> {
-    db_state
-        .0
-        .export_athlete_evaluations_to_csv(athlete_id, path)
+    state.0.export_athlete_evaluations(athlete_id, path)
+        .await
         .map(|_| "Evaluaciones del atleta exportadas exitosamente".to_string())
         .map_err(|e| e.to_string())
 }
@@ -89,11 +91,13 @@ fn main() {
         .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
             let app_handle = app.handle().clone();
-            let audio_player = ThreadSafeAudioPlayer::new(app_handle);
-            let database = Database::new().expect("Failed to initialize database");
+            let audio_player = ThreadSafeAudioPlayer::new(app_handle.clone());
+            let database = Arc::new(Database::new().expect("Failed to initialize database"));
+            let evaluation_service = Arc::new(EvaluationService::new(database.clone()));
 
             app.manage(AudioState(Arc::new(audio_player)));
-            app.manage(DbState(Arc::new(database)));
+            app.manage(DbState(database));
+            app.manage(ServiceState(evaluation_service));
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![

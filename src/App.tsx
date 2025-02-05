@@ -180,37 +180,49 @@ function App() {
 		setConfig((c) => ({ ...c, isFinished: true, isRunning: false }));
 		setShowFinishModal(false);
 
-		// Save data for each active athlete
-		for (const athlete of athletes.filter((a) => a.active)) {
-			try {
-				await invoke("save_evaluation_data", {
-					athlete: {
-						name: athlete.name,
-						age: athlete.age,
-						weight: athlete.weight,
-						height: athlete.height,
-					},
-					completedPeriods: JSON.stringify(athlete.completedPeriods),
-					totalTime,
-					status: "completed",
-				});
-			} catch (error) {
-				console.error(`Error saving data for athlete ${athlete.name}:`, error);
-			}
+		// Save data for each active athlete using Promise.all for better performance
+		try {
+			await Promise.all(
+				athletes
+					.filter((a) => a.active)
+					.map((athlete) =>
+						invoke("save_evaluation_data", {
+							athlete: {
+								name: athlete.name,
+								age: athlete.age,
+								weight: athlete.weight,
+								height: athlete.height,
+							},
+							completedPeriods: JSON.stringify(athlete.completedPeriods),
+							totalTime,
+							status: "completed",
+						}),
+					),
+			);
+			toast.success("Evaluaciones guardadas exitosamente");
+		} catch (error) {
+			console.error("Error saving evaluations:", error);
+			toast.error("Error al guardar las evaluaciones");
 		}
 	};
 
 	const handleStart = async () => {
 		if (isStartingRef.current) return;
 
-		// Check if any active athlete is missing a name
-		const hasUnnamedAthletes = athletes
+		// Check if any active athlete is missing required data
+		const invalidAthletes = athletes
 			.filter((a) => a.active)
-			.some((athlete) => !athlete.name.trim());
+			.filter(
+				(athlete) =>
+					!athlete.name.trim() ||
+					athlete.age <= 0 ||
+					athlete.weight <= 0 ||
+					athlete.height <= 0,
+			);
 
-		if (hasUnnamedAthletes) {
+		if (invalidAthletes.length > 0) {
 			toast.error(
-				"Por favor ingrese el nombre de todos los deportistas activos antes de iniciar.",
+				"Por favor complete todos los datos requeridos de los deportistas activos antes de iniciar.",
 			);
 			return;
 		}
@@ -219,13 +231,13 @@ function App() {
 
 		try {
 			if (!isRecovery) {
-				// Reproducir cuenta regresiva y esperar a que termine
 				await audioService.current?.playCountdown();
-				// Reproducir sonido de inicio
 				await audioService.current?.announceWorkStart();
-				// Ahora sí iniciar el tiempo
 				setConfig((c) => ({ ...c, isRunning: true, isPaused: false }));
 			}
+		} catch (error) {
+			console.error("Error starting test:", error);
+			toast.error("Error al iniciar la evaluación");
 		} finally {
 			isStartingRef.current = false;
 		}
