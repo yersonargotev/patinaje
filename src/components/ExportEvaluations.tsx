@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import { open } from "@tauri-apps/plugin-dialog";
+import { save } from "@tauri-apps/plugin-dialog";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -22,9 +22,7 @@ export function ExportEvaluations({
 				? `evaluacion_${athleteName?.toLowerCase().replace(/\s+/g, "_")}.csv`
 				: "evaluaciones.csv";
 
-			const filePath = await open({
-				directory: false,
-				multiple: false,
+			const filePath = await save({
 				defaultPath,
 				filters: [
 					{
