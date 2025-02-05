@@ -38,7 +38,7 @@ export function ExportEvaluations({
 				return; // User cancelled
 			}
 
-			const result = await invoke(
+			await invoke(
 				athleteId ? "export_athlete_evaluations" : "export_all_evaluations",
 				{
 					...(athleteId && { athleteId }),

@@ -151,10 +151,7 @@ export const AthleteManager: React.FC<AthleteManagerProps> = ({
 									<h3 className="text-md font-medium mb-4">
 										Historial de Evaluaciones
 									</h3>
-									<EvaluationHistory
-										athleteId={athlete.id}
-										athleteName={athlete.name}
-									/>
+									<EvaluationHistory athleteId={athlete.id} />
 								</div>
 							)}
 						</div>
