@@ -19,7 +19,7 @@ export const AthleteManager: React.FC<AthleteManagerProps> = ({
 				<ExportEvaluations />
 			</div>
 			<div className="bg-white p-4 rounded-lg shadow-md">
-				<h2 className="text-lg font-semibold mb-4">Athletes</h2>
+				<h2 className="text-lg font-semibold mb-4">Atletas</h2>
 				<div className="space-y-4">
 					{athletes.map((athlete) => (
 						<div key={athlete.id} className="space-y-4">
@@ -55,7 +55,7 @@ export const AthleteManager: React.FC<AthleteManagerProps> = ({
 											className="block text-sm text-gray-500"
 											htmlFor="age"
 										>
-											Age
+											Edad
 										</label>
 										<input
 											type="number"
@@ -75,7 +75,7 @@ export const AthleteManager: React.FC<AthleteManagerProps> = ({
 											className="block text-sm text-gray-500"
 											htmlFor="weight"
 										>
-											Weight (kg)
+											Peso (kg)
 										</label>
 										<input
 											type="number"
@@ -96,7 +96,7 @@ export const AthleteManager: React.FC<AthleteManagerProps> = ({
 											className="block text-sm text-gray-500"
 											htmlFor="height"
 										>
-											Height (cm)
+											Altura (cm)
 										</label>
 										<input
 											type="number"
@@ -115,7 +115,7 @@ export const AthleteManager: React.FC<AthleteManagerProps> = ({
 								<div className="flex justify-between items-center mt-2">
 									<div className="flex items-center">
 										<span className="text-sm text-gray-500">
-											Completed: {athlete.completedPeriods.length}
+											Completado: {athlete.completedPeriods.length}
 										</span>
 									</div>
 									<button
@@ -129,7 +129,7 @@ export const AthleteManager: React.FC<AthleteManagerProps> = ({
 												: "bg-gray-100 text-gray-800"
 										}`}
 									>
-										{athlete.active ? "Active" : "Inactive"}
+										{athlete.active ? "Activo" : "Inactivo"}
 									</button>
 								</div>
 							</div>

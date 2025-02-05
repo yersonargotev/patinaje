@@ -279,7 +279,7 @@ function App() {
 			<div className="max-w-6xl mx-auto space-y-4">
 				<div className="flex justify-between items-center mb-4">
 					<h1 className="text-2xl font-bold text-gray-800">
-						Sports Training Test
+						Evaluación de Entrenamiento Deportivo
 					</h1>
 					<button
 						type="button"
