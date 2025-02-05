@@ -1,5 +1,4 @@
 import { User } from "lucide-react";
-import { useState } from "react";
 import type { Athlete } from "../types";
 import { EvaluationHistory } from "./EvaluationHistory";
 import { ExportEvaluations } from "./ExportEvaluations";
@@ -13,10 +12,6 @@ export const AthleteManager: React.FC<AthleteManagerProps> = ({
 	athletes,
 	onAthleteUpdate,
 }) => {
-	const [selectedAthleteId, setSelectedAthleteId] = useState<number | null>(
-		null,
-	);
-
 	return (
 		<div className="container mx-auto px-4 py-8">
 			<div className="mb-8 flex justify-between items-center">
@@ -118,17 +113,10 @@ export const AthleteManager: React.FC<AthleteManagerProps> = ({
 								</div>
 
 								<div className="flex justify-between items-center mt-2">
-									<div className="flex items-center space-x-4">
+									<div className="flex items-center">
 										<span className="text-sm text-gray-500">
 											Completed: {athlete.completedPeriods.length}
 										</span>
-										<button
-											type="button"
-											onClick={() => setSelectedAthleteId(athlete.id ?? null)}
-											className="text-sm text-blue-600 hover:text-blue-800"
-										>
-											Ver historial
-										</button>
 									</div>
 									<button
 										type="button"
@@ -146,12 +134,9 @@ export const AthleteManager: React.FC<AthleteManagerProps> = ({
 								</div>
 							</div>
 
-							{selectedAthleteId === athlete.id && athlete.id && (
+							{athlete.id && (
 								<div className="mt-4 p-4 bg-white rounded-lg border border-gray-200">
-									<h3 className="text-md font-medium mb-4">
-										Historial de Evaluaciones
-									</h3>
-									<EvaluationHistory athleteId={athlete.id} />
+									<EvaluationHistory athleteId={athlete.id} athlete={athlete} />
 								</div>
 							)}
 						</div>

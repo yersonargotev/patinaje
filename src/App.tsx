@@ -180,26 +180,40 @@ function App() {
 		setConfig((c) => ({ ...c, isFinished: true, isRunning: false }));
 		setShowFinishModal(false);
 
-		// Save data for each active athlete using Promise.all for better performance
 		try {
+			// Verificar que invoke esté disponible
+			if (typeof invoke !== "function") {
+				throw new Error("Tauri invoke no está disponible");
+			}
+
+			// Save data for each active athlete using Promise.all for better performance
 			await Promise.all(
 				athletes
 					.filter((a) => a.active)
-					.map((athlete) =>
-						invoke("save_evaluation_data", {
-							athlete: {
-								name: athlete.name,
-								age: athlete.age,
-								weight: athlete.weight,
-								height: athlete.height,
-							},
-							completedPeriods: JSON.stringify(athlete.completedPeriods),
-							totalTime,
-							status: "completed",
-						}),
-					),
+					.map(async (athlete) => {
+						try {
+							await invoke("save_evaluation_data", {
+								athlete: {
+									name: athlete.name,
+									age: athlete.age,
+									weight: athlete.weight,
+									height: athlete.height,
+								},
+								completedPeriods: JSON.stringify(athlete.completedPeriods),
+								totalTime,
+								status: "completed",
+							});
+						} catch (error) {
+							console.error(
+								`Error saving evaluation for ${athlete.name}:`,
+								error,
+							);
+							throw error;
+						}
+					}),
 			);
-			toast.success("Evaluaciones guardadas exitosamente");
+
+			toast.success("Evaluaciones guardadas correctamente");
 		} catch (error) {
 			console.error("Error saving evaluations:", error);
 			toast.error("Error al guardar las evaluaciones");
