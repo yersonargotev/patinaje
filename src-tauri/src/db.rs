@@ -112,6 +112,7 @@ impl Database {
     }
 
     pub fn get_athlete_evaluations(&self, athlete_id: i64) -> Result<Vec<Evaluation>> {
+        println!("Fetching evaluations for athlete_id: {}", athlete_id);
         let conn = self.connection.lock().unwrap();
         let mut stmt = conn.prepare(
             "SELECT id, athlete_id, completed_periods, total_time, date, status 
@@ -131,7 +132,12 @@ impl Database {
             })
         })?;
 
-        evals.collect()
+        let results: Result<Vec<Evaluation>> = evals.collect();
+        match &results {
+            Ok(evaluations) => println!("Found {} evaluations for athlete {}", evaluations.len(), athlete_id),
+            Err(e) => println!("Error fetching evaluations: {}", e),
+        }
+        results
     }
 
     pub fn export_all_evaluations_to_csv<P: AsRef<Path>>(
@@ -238,5 +244,38 @@ impl Database {
 
         wtr.flush()?;
         Ok(())
+    }
+
+    pub fn get_all_evaluations(&self) -> Result<Vec<(Evaluation, Athlete)>> {
+        let conn = self.connection.lock().unwrap();
+        let mut stmt = conn.prepare(
+            "SELECT e.id, e.athlete_id, e.completed_periods, e.total_time, e.date, e.status,
+                    a.id, a.name, a.age, a.weight, a.height
+             FROM evaluations e 
+             JOIN athletes a ON e.athlete_id = a.id 
+             ORDER BY e.date DESC"
+        )?;
+
+        let rows = stmt.query_map([], |row| {
+            Ok((
+                Evaluation {
+                    id: Some(row.get(0)?),
+                    athlete_id: row.get(1)?,
+                    completed_periods: row.get(2)?,
+                    total_time: row.get(3)?,
+                    date: row.get(4)?,
+                    status: row.get(5)?,
+                },
+                Athlete {
+                    id: Some(row.get(6)?),
+                    name: row.get(7)?,
+                    age: row.get(8)?,
+                    weight: row.get(9)?,
+                    height: row.get(10)?,
+                }
+            ))
+        })?;
+
+        rows.collect()
     }
 }

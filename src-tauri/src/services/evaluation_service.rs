@@ -32,19 +32,6 @@ impl From<Evaluation> for db::Evaluation {
     }
 }
 
-impl From<db::Evaluation> for Evaluation {
-    fn from(eval: db::Evaluation) -> Self {
-        Evaluation {
-            id: eval.id,
-            athlete_id: eval.athlete_id,
-            completed_periods: eval.completed_periods,
-            total_time: eval.total_time,
-            date: eval.date,
-            status: eval.status,
-        }
-    }
-}
-
 impl EvaluationService {
     pub fn new(db: Arc<Database>) -> Self {
         Self { db }
@@ -82,6 +69,12 @@ impl EvaluationService {
         path: PathBuf,
     ) -> Result<(), String> {
         self.db.export_athlete_evaluations_to_csv(athlete_id, path)
+            .map_err(|e| e.to_string())
+    }
+
+    pub async fn get_all_evaluations(&self) -> Result<Vec<(Evaluation, Athlete)>, String> {
+        self.db.get_all_evaluations()
+            .map(|evals| evals.into_iter().map(|(eval, athlete)| (eval.into(), athlete.into())).collect())
             .map_err(|e| e.to_string())
     }
 } 

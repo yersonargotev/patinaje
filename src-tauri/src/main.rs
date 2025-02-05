@@ -86,6 +86,13 @@ async fn export_athlete_evaluations(
         .map_err(|e| e.to_string())
 }
 
+#[tauri::command]
+async fn get_all_evaluations(
+    state: State<'_, ServiceState>,
+) -> Result<Vec<(Evaluation, Athlete)>, String> {
+    state.0.get_all_evaluations().await
+}
+
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
@@ -106,6 +113,7 @@ fn main() {
             stop_all_sounds,
             save_evaluation_data,
             get_athlete_evaluations,
+            get_all_evaluations,
             export_all_evaluations,
             export_athlete_evaluations
         ])

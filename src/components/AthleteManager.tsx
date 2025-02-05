@@ -136,7 +136,7 @@ export const AthleteManager: React.FC<AthleteManagerProps> = ({
 
 							{athlete.id && (
 								<div className="mt-4 p-4 bg-white rounded-lg border border-gray-200">
-									<EvaluationHistory athleteId={athlete.id} athlete={athlete} />
+									<EvaluationHistory />
 								</div>
 							)}
 						</div>

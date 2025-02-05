@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 use chrono::prelude::*;
+use crate::db;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Athlete {
@@ -35,6 +36,31 @@ impl Evaluation {
             total_time,
             date: Local::now().to_rfc3339(),
             status,
+        }
+    }
+}
+
+impl From<db::Athlete> for Athlete {
+    fn from(athlete: db::Athlete) -> Self {
+        Self {
+            id: athlete.id,
+            name: athlete.name,
+            age: athlete.age,
+            weight: athlete.weight,
+            height: athlete.height,
+        }
+    }
+}
+
+impl From<db::Evaluation> for Evaluation {
+    fn from(eval: db::Evaluation) -> Self {
+        Self {
+            id: eval.id,
+            athlete_id: eval.athlete_id,
+            completed_periods: eval.completed_periods,
+            total_time: eval.total_time,
+            date: eval.date,
+            status: eval.status,
         }
     }
 } 
