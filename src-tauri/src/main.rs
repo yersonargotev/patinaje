@@ -7,6 +7,7 @@ use audio::ThreadSafeAudioPlayer;
 use db::Database;
 use models::{Athlete, Evaluation};
 use services::evaluation_service::EvaluationService;
+use tauri::Emitter;
 use std::path::PathBuf;
 use std::sync::Arc;
 use tauri::Manager;
@@ -26,6 +27,7 @@ async fn save_evaluation_data(
     total_time: i32,
     status: String,
     state: State<'_, ServiceState>,
+    app: tauri::AppHandle,
 ) -> Result<String, String> {
     let evaluation = Evaluation::new(
         None,
@@ -38,6 +40,7 @@ async fn save_evaluation_data(
     state.0.save_evaluation(athlete, evaluation)
         .await
         .map(|(athlete_id, eval_id)| {
+            let _ = app.emit("evaluation-completed", ());
             format!("Saved evaluation {} for athlete {}", eval_id, athlete_id)
         })
         .map_err(|e| e.to_string())
