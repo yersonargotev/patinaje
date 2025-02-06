@@ -227,7 +227,8 @@ impl Database {
     ) -> Result<(), Box<dyn std::error::Error>> {
         let conn = self.connection.lock().unwrap();
         let mut stmt = conn.prepare(
-            "SELECT ae.id, ae.athlete_id, a.name, et.completed_periods, et.total_time, ae.date, ae.status 
+            "SELECT ae.id, ae.athlete_id, a.name, et.completed_periods, et.total_time, ae.date, ae.status, 
+                    a.observations, et.total_distance
              FROM athlete_evaluations ae 
              JOIN athletes a ON ae.athlete_id = a.id 
              JOIN evaluation_templates et ON ae.template_id = et.id
@@ -243,6 +244,8 @@ impl Database {
             "Tiempo Total (s)",
             "Fecha",
             "Estado",
+            "Observaciones",
+            "Distancia Total (m)",
         ])?;
 
         let rows = stmt.query_map([], |row| {
@@ -254,11 +257,13 @@ impl Database {
                 row.get::<_, i32>(4)?,
                 row.get::<_, String>(5)?,
                 row.get::<_, String>(6)?,
+                row.get::<_, Option<String>>(7)?.unwrap_or_default(),
+                row.get::<_, f32>(8)?,
             ))
         })?;
 
         for row in rows {
-            let (id, athlete_id, name, periods, time, date, status) = row?;
+            let (id, athlete_id, name, periods, time, date, status, observations, total_distance) = row?;
             wtr.write_record(&[
                 id.to_string(),
                 athlete_id.to_string(),
@@ -267,6 +272,8 @@ impl Database {
                 time.to_string(),
                 date,
                 status,
+                observations,
+                total_distance.to_string(),
             ])?;
         }
 
@@ -281,7 +288,8 @@ impl Database {
     ) -> Result<(), Box<dyn std::error::Error>> {
         let conn = self.connection.lock().unwrap();
         let mut stmt = conn.prepare(
-            "SELECT ae.id, ae.athlete_id, a.name, et.completed_periods, et.total_time, ae.date, ae.status 
+            "SELECT ae.id, ae.athlete_id, a.name, et.completed_periods, et.total_time, ae.date, ae.status,
+                    a.observations, et.total_distance
              FROM athlete_evaluations ae 
              JOIN athletes a ON ae.athlete_id = a.id 
              JOIN evaluation_templates et ON ae.template_id = et.id
@@ -298,6 +306,8 @@ impl Database {
             "Tiempo Total (s)",
             "Fecha",
             "Estado",
+            "Observaciones",
+            "Distancia Total (m)",
         ])?;
 
         let rows = stmt.query_map([athlete_id], |row| {
@@ -309,11 +319,13 @@ impl Database {
                 row.get::<_, i32>(4)?,
                 row.get::<_, String>(5)?,
                 row.get::<_, String>(6)?,
+                row.get::<_, Option<String>>(7)?.unwrap_or_default(),
+                row.get::<_, f32>(8)?,
             ))
         })?;
 
         for row in rows {
-            let (id, athlete_id, name, periods, time, date, status) = row?;
+            let (id, athlete_id, name, periods, time, date, status, observations, total_distance) = row?;
             wtr.write_record(&[
                 id.to_string(),
                 athlete_id.to_string(),
@@ -322,6 +334,8 @@ impl Database {
                 time.to_string(),
                 date,
                 status,
+                observations,
+                total_distance.to_string(),
             ])?;
         }
 
