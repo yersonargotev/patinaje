@@ -27,6 +27,7 @@ function App() {
 		period: 2,
 		lap: 0,
 		segment: 0,
+		elapsedTime: 0,
 	});
 
 	const [athletes, setAthletes] = useState<Athlete[]>([
@@ -130,6 +131,7 @@ function App() {
 
 			workTimer.current = window.setInterval(() => {
 				setWorkTime((t) => t + 1);
+				setPosition((prev) => ({ ...prev, elapsedTime: prev.elapsedTime + 1 }));
 			}, 1000);
 
 			const interval = calculateIntervalTime(config.currentPeriod);
@@ -137,8 +139,18 @@ function App() {
 				audioService.current?.playIntervalBeep();
 
 				setPosition((prev) => {
-					const newSegment = (prev.segment + 1) % 8;
+					const newSegment = (prev.segment + 1) % 4;
 					const newLap = newSegment === 0 ? (prev.lap + 1) % 4 : prev.lap;
+
+					if (prev.period === position.period) {
+						setAthletes((currentAthletes) =>
+							currentAthletes.map((athlete) =>
+								athlete.active
+									? { ...athlete, totalDistance: athlete.totalDistance + 50 }
+									: athlete,
+							),
+						);
+					}
 
 					if (newLap === 0 && newSegment === 0) {
 						// Update completed periods for active athletes
@@ -158,7 +170,12 @@ function App() {
 
 						audioService.current?.announceWorkComplete();
 						setIsRecovery(true);
-						return { period: prev.period + 1, lap: 0, segment: 0 };
+						return {
+							period: prev.period + 1,
+							lap: 0,
+							segment: 0,
+							elapsedTime: prev.elapsedTime,
+						};
 					}
 
 					return { ...prev, lap: newLap, segment: newSegment };
@@ -176,6 +193,7 @@ function App() {
 		config.isFinished,
 		config.currentPeriod,
 		isRecovery,
+		position.period,
 	]);
 
 	const handleFinish = async () => {
@@ -355,7 +373,7 @@ function App() {
 					activeAthletes={athletes.filter((a) => a.active).length}
 				/>
 
-				<Track position={position} />
+				<Track position={position} currentPeriod={config.currentPeriod} />
 
 				<ControlPanel
 					config={config}
