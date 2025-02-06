@@ -5,7 +5,7 @@ mod services;
 
 use audio::ThreadSafeAudioPlayer;
 use db::Database;
-use models::{Athlete, Evaluation};
+use models::{Athlete, AthleteEvaluation, EvaluationTemplate};
 use services::evaluation_service::EvaluationService;
 use tauri::Emitter;
 use std::path::PathBuf;
@@ -29,19 +29,11 @@ async fn save_evaluation_data(
     state: State<'_, ServiceState>,
     app: tauri::AppHandle,
 ) -> Result<String, String> {
-    let evaluation = Evaluation::new(
-        None,
-        0,
-        completed_periods,
-        total_time,
-        status,
-    );
-
-    state.0.save_evaluation(athlete, evaluation)
+    state.0.save_evaluation(athlete, completed_periods, total_time, status)
         .await
-        .map(|(athlete_id, eval_id)| {
+        .map(|(athlete_id, template_id, eval_id)| {
             let _ = app.emit("evaluation-completed", ());
-            format!("Saved evaluation {} for athlete {}", eval_id, athlete_id)
+            format!("Saved evaluation {} with template {} for athlete {}", eval_id, template_id, athlete_id)
         })
         .map_err(|e| e.to_string())
 }
@@ -50,7 +42,7 @@ async fn save_evaluation_data(
 async fn get_athlete_evaluations(
     athlete_id: i64,
     state: State<'_, ServiceState>,
-) -> Result<Vec<Evaluation>, String> {
+) -> Result<Vec<(AthleteEvaluation, EvaluationTemplate)>, String> {
     state.0.get_athlete_evaluations(athlete_id)
         .await
         .map_err(|e| e.to_string())
@@ -92,7 +84,7 @@ async fn export_athlete_evaluations(
 #[tauri::command]
 async fn get_all_evaluations(
     state: State<'_, ServiceState>,
-) -> Result<Vec<(Evaluation, Athlete)>, String> {
+) -> Result<Vec<(AthleteEvaluation, EvaluationTemplate, Athlete)>, String> {
     state.0.get_all_evaluations().await
 }
 

@@ -12,30 +12,35 @@ pub struct Athlete {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct Evaluation {
+pub struct EvaluationTemplate {
     pub id: Option<i64>,
-    pub athlete_id: i64,
     pub completed_periods: String,
     pub total_time: i32,
     pub date: String,
-    pub status: String,
 }
 
-impl Evaluation {
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct AthleteEvaluation {
+    pub id: Option<i64>,
+    pub athlete_id: i64,
+    pub template_id: i64,
+    pub status: String,
+    pub date: String,
+}
+
+impl AthleteEvaluation {
     pub fn new(
         id: Option<i64>,
         athlete_id: i64,
-        completed_periods: String,
-        total_time: i32,
+        template_id: i64,
         status: String,
     ) -> Self {
         Self {
             id,
             athlete_id,
-            completed_periods,
-            total_time,
-            date: Local::now().to_rfc3339(),
+            template_id,
             status,
+            date: Local::now().to_rfc3339(),
         }
     }
 }
@@ -52,15 +57,25 @@ impl From<db::Athlete> for Athlete {
     }
 }
 
-impl From<db::Evaluation> for Evaluation {
-    fn from(eval: db::Evaluation) -> Self {
+impl From<db::EvaluationTemplate> for EvaluationTemplate {
+    fn from(template: db::EvaluationTemplate) -> Self {
+        Self {
+            id: template.id,
+            completed_periods: template.completed_periods,
+            total_time: template.total_time,
+            date: template.date,
+        }
+    }
+}
+
+impl From<db::AthleteEvaluation> for AthleteEvaluation {
+    fn from(eval: db::AthleteEvaluation) -> Self {
         Self {
             id: eval.id,
             athlete_id: eval.athlete_id,
-            completed_periods: eval.completed_periods,
-            total_time: eval.total_time,
-            date: eval.date,
+            template_id: eval.template_id,
             status: eval.status,
+            date: eval.date,
         }
     }
 } 

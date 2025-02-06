@@ -1,4 +1,3 @@
-import { Clock, RefreshCw, Timer as TimerIcon } from "lucide-react";
 import { formatTime } from "../utils/timing";
 
 interface TimerProps {

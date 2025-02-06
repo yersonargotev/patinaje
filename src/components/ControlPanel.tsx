@@ -19,7 +19,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
 	onRecoveryTimeChange,
 	onAthleteCountChange,
 }) => {
-	const periodData = getPeriodData(config.currentPeriod);
+	getPeriodData(config.currentPeriod);
 
 	return (
 		<div className="bg-white p-4 rounded-lg shadow-md">

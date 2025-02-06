@@ -15,13 +15,20 @@ pub struct Athlete {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct Evaluation {
+pub struct EvaluationTemplate {
     pub id: Option<i64>,
-    pub athlete_id: i64,
     pub completed_periods: String,
     pub total_time: i32,
     pub date: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct AthleteEvaluation {
+    pub id: Option<i64>,
+    pub athlete_id: i64,
+    pub template_id: i64,
     pub status: String,
+    pub date: String,
 }
 
 pub struct Database {
@@ -45,28 +52,46 @@ impl Database {
         )?;
 
         conn.execute(
-            "CREATE TABLE IF NOT EXISTS evaluations (
+            "CREATE TABLE IF NOT EXISTS evaluation_templates (
                 id INTEGER PRIMARY KEY,
-                athlete_id INTEGER NOT NULL,
                 completed_periods TEXT NOT NULL,
                 total_time INTEGER NOT NULL,
-                date TEXT NOT NULL,
-                status TEXT NOT NULL CHECK (status IN ('completed', 'cancelled')),
-                FOREIGN KEY (athlete_id) REFERENCES athletes (id)
+                date TEXT NOT NULL
             )",
             [],
         )?;
 
-        Ok(Database {
+        conn.execute(
+            "CREATE TABLE IF NOT EXISTS athlete_evaluations (
+                id INTEGER PRIMARY KEY,
+                athlete_id INTEGER NOT NULL,
+                template_id INTEGER NOT NULL,
+                status TEXT NOT NULL CHECK (status IN ('completed', 'cancelled')),
+                date TEXT NOT NULL,
+                FOREIGN KEY (athlete_id) REFERENCES athletes (id),
+                FOREIGN KEY (template_id) REFERENCES evaluation_templates (id)
+            )",
+            [],
+        )?;
+
+        let db = Database {
             connection: Mutex::new(conn),
-        })
+        };
+
+        // Migrate old data if necessary
+        if let Err(e) = db.migrate_old_evaluations() {
+            eprintln!("Error migrating old evaluations: {}", e);
+        }
+
+        Ok(db)
     }
 
     pub fn save_evaluation_data(
         &self,
         athlete: &Athlete,
-        evaluation: &Evaluation,
-    ) -> Result<(i64, i64)> {
+        template: &EvaluationTemplate,
+        athlete_evaluation: &AthleteEvaluation,
+    ) -> Result<(i64, i64, i64)> {
         let mut conn = self.connection.lock().unwrap();
         let tx = conn.transaction()?;
 
@@ -83,23 +108,35 @@ impl Database {
 
         let athlete_id = tx.last_insert_rowid();
 
+        // Save evaluation template
+        tx.execute(
+            "INSERT INTO evaluation_templates (completed_periods, total_time, date) 
+             VALUES (?1, ?2, ?3)",
+            [
+                &template.completed_periods,
+                &template.total_time.to_string(),
+                &template.date,
+            ],
+        )?;
+
+        let template_id = tx.last_insert_rowid();
+
         // Validate date format
-        if NaiveDateTime::parse_from_str(&evaluation.date, "%Y-%m-%dT%H:%M:%S%.f%z").is_err() {
+        if NaiveDateTime::parse_from_str(&athlete_evaluation.date, "%Y-%m-%dT%H:%M:%S%.f%z").is_err() {
             return Err(rusqlite::Error::InvalidParameterName(
                 "Invalid date format".into(),
             ));
         }
 
-        // Save evaluation with the new athlete_id
+        // Save athlete evaluation with the new athlete_id and template_id
         tx.execute(
-            "INSERT INTO evaluations (athlete_id, completed_periods, total_time, date, status) 
-             VALUES (?1, ?2, ?3, ?4, ?5)",
+            "INSERT INTO athlete_evaluations (athlete_id, template_id, status, date) 
+             VALUES (?1, ?2, ?3, ?4)",
             [
                 &athlete_id.to_string(),
-                &evaluation.completed_periods,
-                &evaluation.total_time.to_string(),
-                &evaluation.date,
-                &evaluation.status,
+                &template_id.to_string(),
+                &athlete_evaluation.status,
+                &athlete_evaluation.date,
             ],
         )?;
 
@@ -108,36 +145,39 @@ impl Database {
         // Commit the transaction
         tx.commit()?;
 
-        Ok((athlete_id, eval_id))
+        Ok((athlete_id, template_id, eval_id))
     }
 
-    pub fn get_athlete_evaluations(&self, athlete_id: i64) -> Result<Vec<Evaluation>> {
-        println!("Fetching evaluations for athlete_id: {}", athlete_id);
+    pub fn get_athlete_evaluations(&self, athlete_id: i64) -> Result<Vec<(AthleteEvaluation, EvaluationTemplate)>> {
         let conn = self.connection.lock().unwrap();
         let mut stmt = conn.prepare(
-            "SELECT id, athlete_id, completed_periods, total_time, date, status 
-             FROM evaluations 
-             WHERE athlete_id = ?1 
-             ORDER BY date DESC",
+            "SELECT ae.id, ae.athlete_id, ae.template_id, ae.status, ae.date,
+                    et.id, et.completed_periods, et.total_time, et.date
+             FROM athlete_evaluations ae
+             JOIN evaluation_templates et ON ae.template_id = et.id
+             WHERE ae.athlete_id = ?1 
+             ORDER BY ae.date DESC",
         )?;
 
         let evals = stmt.query_map([athlete_id], |row| {
-            Ok(Evaluation {
-                id: Some(row.get(0)?),
-                athlete_id: row.get(1)?,
-                completed_periods: row.get(2)?,
-                total_time: row.get(3)?,
-                date: row.get(4)?,
-                status: row.get(5)?,
-            })
+            Ok((
+                AthleteEvaluation {
+                    id: Some(row.get(0)?),
+                    athlete_id: row.get(1)?,
+                    template_id: row.get(2)?,
+                    status: row.get(3)?,
+                    date: row.get(4)?,
+                },
+                EvaluationTemplate {
+                    id: Some(row.get(5)?),
+                    completed_periods: row.get(6)?,
+                    total_time: row.get(7)?,
+                    date: row.get(8)?,
+                }
+            ))
         })?;
 
-        let results: Result<Vec<Evaluation>> = evals.collect();
-        match &results {
-            Ok(evaluations) => println!("Found {} evaluations for athlete {}", evaluations.len(), athlete_id),
-            Err(e) => println!("Error fetching evaluations: {}", e),
-        }
-        results
+        evals.collect()
     }
 
     pub fn export_all_evaluations_to_csv<P: AsRef<Path>>(
@@ -146,10 +186,11 @@ impl Database {
     ) -> Result<(), Box<dyn std::error::Error>> {
         let conn = self.connection.lock().unwrap();
         let mut stmt = conn.prepare(
-            "SELECT e.id, e.athlete_id, a.name, e.completed_periods, e.total_time, e.date, e.status 
-             FROM evaluations e 
-             JOIN athletes a ON e.athlete_id = a.id 
-             ORDER BY e.date DESC"
+            "SELECT ae.id, ae.athlete_id, a.name, et.completed_periods, et.total_time, ae.date, ae.status 
+             FROM athlete_evaluations ae 
+             JOIN athletes a ON ae.athlete_id = a.id 
+             JOIN evaluation_templates et ON ae.template_id = et.id
+             ORDER BY ae.date DESC"
         )?;
 
         let mut wtr = Writer::from_path(path)?;
@@ -199,11 +240,12 @@ impl Database {
     ) -> Result<(), Box<dyn std::error::Error>> {
         let conn = self.connection.lock().unwrap();
         let mut stmt = conn.prepare(
-            "SELECT e.id, e.athlete_id, a.name, e.completed_periods, e.total_time, e.date, e.status 
-             FROM evaluations e 
-             JOIN athletes a ON e.athlete_id = a.id 
-             WHERE e.athlete_id = ?1
-             ORDER BY e.date DESC"
+            "SELECT ae.id, ae.athlete_id, a.name, et.completed_periods, et.total_time, ae.date, ae.status 
+             FROM athlete_evaluations ae 
+             JOIN athletes a ON ae.athlete_id = a.id 
+             JOIN evaluation_templates et ON ae.template_id = et.id
+             WHERE ae.athlete_id = ?1
+             ORDER BY ae.date DESC"
         )?;
 
         let mut wtr = Writer::from_path(path)?;
@@ -246,36 +288,95 @@ impl Database {
         Ok(())
     }
 
-    pub fn get_all_evaluations(&self) -> Result<Vec<(Evaluation, Athlete)>> {
+    pub fn get_all_evaluations(&self) -> Result<Vec<(AthleteEvaluation, EvaluationTemplate, Athlete)>> {
         let conn = self.connection.lock().unwrap();
         let mut stmt = conn.prepare(
-            "SELECT e.id, e.athlete_id, e.completed_periods, e.total_time, e.date, e.status,
+            "SELECT ae.id, ae.athlete_id, ae.template_id, ae.status, ae.date,
+                    et.id, et.completed_periods, et.total_time, et.date,
                     a.id, a.name, a.age, a.weight, a.height
-             FROM evaluations e 
-             JOIN athletes a ON e.athlete_id = a.id 
-             ORDER BY e.date DESC"
+             FROM athlete_evaluations ae 
+             JOIN evaluation_templates et ON ae.template_id = et.id
+             JOIN athletes a ON ae.athlete_id = a.id 
+             ORDER BY ae.date DESC"
         )?;
 
         let rows = stmt.query_map([], |row| {
             Ok((
-                Evaluation {
+                AthleteEvaluation {
                     id: Some(row.get(0)?),
                     athlete_id: row.get(1)?,
-                    completed_periods: row.get(2)?,
-                    total_time: row.get(3)?,
+                    template_id: row.get(2)?,
+                    status: row.get(3)?,
                     date: row.get(4)?,
-                    status: row.get(5)?,
+                },
+                EvaluationTemplate {
+                    id: Some(row.get(5)?),
+                    completed_periods: row.get(6)?,
+                    total_time: row.get(7)?,
+                    date: row.get(8)?,
                 },
                 Athlete {
-                    id: Some(row.get(6)?),
-                    name: row.get(7)?,
-                    age: row.get(8)?,
-                    weight: row.get(9)?,
-                    height: row.get(10)?,
+                    id: Some(row.get(9)?),
+                    name: row.get(10)?,
+                    age: row.get(11)?,
+                    weight: row.get(12)?,
+                    height: row.get(13)?,
                 }
             ))
         })?;
 
         rows.collect()
+    }
+
+    pub fn migrate_old_evaluations(&self) -> Result<(), Box<dyn std::error::Error>> {
+        let mut conn = self.connection.lock().unwrap();
+        let tx = conn.transaction()?;
+
+        // Check if old evaluations table exists
+        let old_table_exists: bool = tx
+            .query_row(
+                "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='evaluations'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap_or(false);
+
+        if old_table_exists {
+            // Create temporary table to store old data
+            tx.execute(
+                "CREATE TEMPORARY TABLE old_evaluations AS SELECT * FROM evaluations",
+                [],
+            )?;
+
+            // Migrate data to new structure
+            tx.execute(
+                "INSERT INTO evaluation_templates (completed_periods, total_time, date)
+                 SELECT DISTINCT completed_periods, total_time, date
+                 FROM old_evaluations",
+                [],
+            )?;
+
+            tx.execute(
+                "INSERT INTO athlete_evaluations (athlete_id, template_id, status, date)
+                 SELECT 
+                     oe.athlete_id,
+                     et.id,
+                     oe.status,
+                     oe.date
+                 FROM old_evaluations oe
+                 JOIN evaluation_templates et 
+                     ON et.completed_periods = oe.completed_periods
+                     AND et.total_time = oe.total_time
+                     AND et.date = oe.date",
+                [],
+            )?;
+
+            // Drop old table
+            tx.execute("DROP TABLE evaluations", [])?;
+            tx.execute("DROP TABLE old_evaluations", [])?;
+        }
+
+        tx.commit()?;
+        Ok(())
     }
 }

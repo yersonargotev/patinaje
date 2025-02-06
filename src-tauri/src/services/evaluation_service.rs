@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 use std::sync::Arc;
 use crate::db::{self, Database};
-use crate::models::{Athlete, Evaluation};
+use crate::models::{Athlete, AthleteEvaluation, EvaluationTemplate};
 
 pub struct EvaluationService {
     db: Arc<Database>,
@@ -19,15 +19,25 @@ impl From<Athlete> for db::Athlete {
     }
 }
 
-impl From<Evaluation> for db::Evaluation {
-    fn from(eval: Evaluation) -> Self {
-        db::Evaluation {
+impl From<EvaluationTemplate> for db::EvaluationTemplate {
+    fn from(template: EvaluationTemplate) -> Self {
+        db::EvaluationTemplate {
+            id: template.id,
+            completed_periods: template.completed_periods,
+            total_time: template.total_time,
+            date: template.date,
+        }
+    }
+}
+
+impl From<AthleteEvaluation> for db::AthleteEvaluation {
+    fn from(eval: AthleteEvaluation) -> Self {
+        db::AthleteEvaluation {
             id: eval.id,
             athlete_id: eval.athlete_id,
-            completed_periods: eval.completed_periods,
-            total_time: eval.total_time,
-            date: eval.date,
+            template_id: eval.template_id,
             status: eval.status,
+            date: eval.date,
         }
     }
 }
@@ -40,18 +50,34 @@ impl EvaluationService {
     pub async fn save_evaluation(
         &self,
         athlete: Athlete,
-        evaluation: Evaluation,
-    ) -> Result<(i64, i64), String> {
-        self.db.save_evaluation_data(&athlete.into(), &evaluation.into())
+        completed_periods: String,
+        total_time: i32,
+        status: String,
+    ) -> Result<(i64, i64, i64), String> {
+        let template = EvaluationTemplate {
+            id: None,
+            completed_periods,
+            total_time,
+            date: chrono::Local::now().to_rfc3339(),
+        };
+
+        let athlete_evaluation = AthleteEvaluation::new(
+            None,
+            0, // Will be set by the database
+            0, // Will be set by the database
+            status,
+        );
+
+        self.db.save_evaluation_data(&athlete.into(), &template.into(), &athlete_evaluation.into())
             .map_err(|e| e.to_string())
     }
 
     pub async fn get_athlete_evaluations(
         &self,
         athlete_id: i64,
-    ) -> Result<Vec<Evaluation>, String> {
+    ) -> Result<Vec<(AthleteEvaluation, EvaluationTemplate)>, String> {
         self.db.get_athlete_evaluations(athlete_id)
-            .map(|evals| evals.into_iter().map(Into::into).collect())
+            .map(|evals| evals.into_iter().map(|(eval, template)| (eval.into(), template.into())).collect())
             .map_err(|e| e.to_string())
     }
 
@@ -72,9 +98,10 @@ impl EvaluationService {
             .map_err(|e| e.to_string())
     }
 
-    pub async fn get_all_evaluations(&self) -> Result<Vec<(Evaluation, Athlete)>, String> {
+    pub async fn get_all_evaluations(&self) -> Result<Vec<(AthleteEvaluation, EvaluationTemplate, Athlete)>, String> {
         self.db.get_all_evaluations()
-            .map(|evals| evals.into_iter().map(|(eval, athlete)| (eval.into(), athlete.into())).collect())
+            .map(|evals| evals.into_iter().map(|(eval, template, athlete)| 
+                (eval.into(), template.into(), athlete.into())).collect())
             .map_err(|e| e.to_string())
     }
 } 
