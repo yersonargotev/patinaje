@@ -221,17 +221,13 @@ function App() {
 		}
 	};
 
-	const handleFinishAthlete = (athleteId: number) => {
-		setAthletes((currentAthletes) =>
-			currentAthletes.map((athlete) =>
-				athlete.id === athleteId ? { ...athlete, active: false } : athlete,
-			),
-		);
-
-		// Save the evaluation data for the finished athlete
+	const handleFinishAthlete = async (athleteId: number) => {
 		const athlete = athletes.find((a) => a.id === athleteId);
-		if (athlete) {
-			invoke("save_evaluation_data", {
+		if (!athlete) return;
+
+		try {
+			// Save the evaluation data for the finished athlete
+			await invoke("save_evaluation_data", {
 				athlete: {
 					name: athlete.name,
 					age: athlete.age,
@@ -241,18 +237,27 @@ function App() {
 				completedPeriods: JSON.stringify(athlete.completedPeriods),
 				totalTime,
 				status: "completed",
-			}).catch((error) => {
-				console.error(`Error saving evaluation for ${athlete.name}:`, error);
-				toast.error(`Error al guardar la evaluación de ${athlete.name}`);
 			});
-		}
 
-		// Check if all athletes are finished
-		const remainingActiveAthletes = athletes.filter(
-			(a) => a.id !== athleteId && a.active,
-		).length;
-		if (remainingActiveAthletes === 0) {
-			setConfig((c) => ({ ...c, isFinished: true, isRunning: false }));
+			// Update athlete state after successful save
+			setAthletes((currentAthletes) =>
+				currentAthletes.map((a) =>
+					a.id === athleteId ? { ...a, active: false } : a,
+				),
+			);
+
+			toast.success(`Evaluación de ${athlete.name} guardada correctamente`);
+
+			// Check if all athletes are finished
+			const remainingActiveAthletes = athletes.filter(
+				(a) => a.id !== athleteId && a.active,
+			).length;
+			if (remainingActiveAthletes === 0) {
+				setConfig((c) => ({ ...c, isFinished: true, isRunning: false }));
+			}
+		} catch (error) {
+			console.error(`Error saving evaluation for ${athlete.name}:`, error);
+			toast.error(`Error al guardar la evaluación de ${athlete.name}`);
 		}
 	};
 
@@ -397,7 +402,7 @@ function App() {
 				onConfirm={handleFinish}
 			/>
 
-			<Toaster position="top-right" />
+			<Toaster position="top-center" richColors />
 		</div>
 	);
 }

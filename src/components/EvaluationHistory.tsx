@@ -7,15 +7,21 @@ import type { Athlete } from "../types";
 interface RawEvaluation {
 	id: number;
 	athlete_id: number;
+	template_id: number;
+	status: string;
+	date: string;
+}
+
+interface EvaluationTemplate {
+	id: number;
 	completed_periods: string;
 	total_time: number;
 	date: string;
-	status: string;
 }
 
-interface TransformedEvaluation
-	extends Omit<RawEvaluation, "completed_periods" | "date"> {
+interface TransformedEvaluation extends Omit<RawEvaluation, "template_id"> {
 	completed_periods: number[];
+	total_time: number;
 	date: string;
 	athlete: Athlete;
 }
@@ -25,13 +31,15 @@ export function EvaluationHistory() {
 	const [loading, setLoading] = useState(true);
 
 	const transformCallback = useCallback(
-		([evaluation, athlete]: [
+		([evaluation, template, athlete]: [
 			RawEvaluation,
+			EvaluationTemplate,
 			Athlete,
 		]): TransformedEvaluation => {
 			return {
 				...evaluation,
-				completed_periods: JSON.parse(evaluation.completed_periods),
+				completed_periods: JSON.parse(template.completed_periods),
+				total_time: template.total_time,
 				date: new Date(evaluation.date).toLocaleDateString(),
 				athlete,
 			};
@@ -43,7 +51,7 @@ export function EvaluationHistory() {
 		try {
 			setLoading(true);
 			console.log("Fetching all evaluations");
-			const data = await invoke<[RawEvaluation, Athlete][]>(
+			const data = await invoke<[RawEvaluation, EvaluationTemplate, Athlete][]>(
 				"get_all_evaluations",
 			);
 			console.log("Raw evaluations received:", data);
