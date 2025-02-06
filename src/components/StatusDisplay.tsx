@@ -1,4 +1,5 @@
 import { formatTime } from "../utils/timing";
+import { getPeriodData } from "../utils/testData";
 
 interface StatusDisplayProps {
 	period: number;
@@ -13,16 +14,24 @@ export const StatusDisplay: React.FC<StatusDisplayProps> = ({
 	recoveryTime,
 	activeAthletes,
 }) => {
+	const periodData = getPeriodData(period);
+
 	return (
 		<div className="grid grid-cols-4 gap-4 mb-4">
 			<div className="bg-white p-4 rounded-lg shadow-md">
 				<h3 className="text-sm font-medium text-gray-500">Periodo</h3>
 				<p className="text-2xl font-bold">{period}</p>
+				<p className="text-sm text-gray-600">
+					Velocidad: {periodData?.speed} km/h
+				</p>
 			</div>
 
 			<div className="bg-white p-4 rounded-lg shadow-md">
 				<h3 className="text-sm font-medium text-gray-500">Vuelta</h3>
 				<p className="text-2xl font-bold">{lap}/4</p>
+				<p className="text-sm text-gray-600">
+					Distancia: {periodData?.distance} m
+				</p>
 			</div>
 
 			<div className="bg-white p-4 rounded-lg shadow-md">
@@ -31,7 +40,9 @@ export const StatusDisplay: React.FC<StatusDisplayProps> = ({
 			</div>
 
 			<div className="bg-white p-4 rounded-lg shadow-md">
-				<h3 className="text-sm font-medium text-gray-500">Atletas Activos</h3>
+				<h3 className="text-sm font-medium text-gray-500">
+					Deportistas Activos
+				</h3>
 				<p className="text-2xl font-bold">{activeAthletes}</p>
 			</div>
 		</div>

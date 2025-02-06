@@ -1,5 +1,6 @@
 import { Pause, Play } from "lucide-react";
 import type { TestConfig } from "../types";
+import { getPeriodData } from "../utils/testData";
 
 interface ControlPanelProps {
 	config: TestConfig;
@@ -18,6 +19,8 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
 	onRecoveryTimeChange,
 	onAthleteCountChange,
 }) => {
+	const periodData = getPeriodData(config.currentPeriod);
+
 	return (
 		<div className="bg-white p-4 rounded-lg shadow-md">
 			<div className="flex items-center justify-between mb-4">
@@ -42,6 +45,23 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
 				<div className="flex items-center space-x-4">
 					<div>
 						<label
+							htmlFor="athleteCount"
+							className="block text-sm font-medium text-gray-700"
+						>
+							Deportistas
+						</label>
+						<input
+							type="number"
+							value={config.athleteCount}
+							onChange={(e) => onAthleteCountChange(Number(e.target.value))}
+							min={1}
+							max={9}
+							className="py-1 px-2 mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-500"
+						/>
+					</div>
+
+					<div>
+						<label
 							htmlFor="period"
 							className="block text-sm font-medium text-gray-700"
 						>
@@ -54,11 +74,14 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
 						>
 							{Array(21)
 								.fill(0)
-								.map((_, idx) => (
-									<option key={idx + 2} value={idx + 2}>
-										{idx + 2}
-									</option>
-								))}
+								.map((_, idx) => {
+									const period = idx + 2;
+									return (
+										<option key={`period-${period}`} value={period}>
+											{period} - {getPeriodData(period)?.speed} km/h
+										</option>
+									);
+								})}
 						</select>
 					</div>
 
@@ -67,7 +90,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
 							htmlFor="recoveryTime"
 							className="block text-sm font-medium text-gray-700"
 						>
-							Recuperación
+							Tiempo de Recuperación
 						</label>
 						<input
 							type="number"
@@ -76,23 +99,6 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
 							min={15}
 							max={120}
 							className="mt-1 block w-full border-1 rounded-md border-gray-300 py-1 px-3 bg-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-						/>
-					</div>
-
-					<div>
-						<label
-							htmlFor="athleteCount"
-							className="block text-sm font-medium text-gray-700"
-						>
-							Atletas
-						</label>
-						<input
-							type="number"
-							value={config.athleteCount}
-							onChange={(e) => onAthleteCountChange(Number(e.target.value))}
-							min={1}
-							max={9}
-							className="py-1 px-2 mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-500"
 						/>
 					</div>
 				</div>

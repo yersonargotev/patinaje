@@ -45,6 +45,7 @@ function App() {
 	const [workTime, setWorkTime] = useState(0);
 	const [recoveryTime] = useState(0);
 	const [totalTime, setTotalTime] = useState(0);
+	const [prepCountdown, setPrepCountdown] = useState<number | null>(null);
 
 	const audioService = useRef<AudioService>(new AudioService());
 	const workTimer = useRef<number>();
@@ -220,6 +221,41 @@ function App() {
 		}
 	};
 
+	const handleFinishAthlete = (athleteId: number) => {
+		setAthletes((currentAthletes) =>
+			currentAthletes.map((athlete) =>
+				athlete.id === athleteId ? { ...athlete, active: false } : athlete,
+			),
+		);
+
+		// Save the evaluation data for the finished athlete
+		const athlete = athletes.find((a) => a.id === athleteId);
+		if (athlete) {
+			invoke("save_evaluation_data", {
+				athlete: {
+					name: athlete.name,
+					age: athlete.age,
+					weight: athlete.weight,
+					height: athlete.height,
+				},
+				completedPeriods: JSON.stringify(athlete.completedPeriods),
+				totalTime,
+				status: "completed",
+			}).catch((error) => {
+				console.error(`Error saving evaluation for ${athlete.name}:`, error);
+				toast.error(`Error al guardar la evaluación de ${athlete.name}`);
+			});
+		}
+
+		// Check if all athletes are finished
+		const remainingActiveAthletes = athletes.filter(
+			(a) => a.id !== athleteId && a.active,
+		).length;
+		if (remainingActiveAthletes === 0) {
+			setConfig((c) => ({ ...c, isFinished: true, isRunning: false }));
+		}
+	};
+
 	const handleStart = async () => {
 		if (isStartingRef.current) return;
 
@@ -245,13 +281,30 @@ function App() {
 
 		try {
 			if (!isRecovery) {
+				// Start 10-second preparation countdown
+				setPrepCountdown(10);
+				const countdownInterval = setInterval(() => {
+					setPrepCountdown((prev) => {
+						if (prev === null || prev <= 1) {
+							clearInterval(countdownInterval);
+							return null;
+						}
+						return prev - 1;
+					});
+				}, 1000);
+
+				// Wait for countdown to complete
+				await new Promise((resolve) => setTimeout(resolve, 10000));
+
 				await audioService.current?.playCountdown();
 				await audioService.current?.announceWorkStart();
+				setConfig((c) => ({ ...c, isRunning: true, isPaused: false }));
+			} else {
 				setConfig((c) => ({ ...c, isRunning: true, isPaused: false }));
 			}
 		} catch (error) {
 			console.error("Error starting test:", error);
-			toast.error("Error al iniciar la evaluación");
+			toast.error("Error al iniciar la prueba");
 		} finally {
 			isStartingRef.current = false;
 		}
@@ -275,84 +328,83 @@ function App() {
 	};
 
 	return (
-		<div className="min-h-screen bg-gray-100 p-4">
-			<div className="max-w-6xl mx-auto space-y-4">
-				<div className="flex justify-between items-center mb-4">
-					<h1 className="text-2xl font-bold text-gray-800">
-						Evaluación de Entrenamiento Deportivo
-					</h1>
-					<button
-						type="button"
-						onClick={handleShowFinishModal}
-						className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
-						disabled={config.isFinished}
-					>
-						Finalizar Evaluación
-					</button>
-				</div>
+		<div className="container mx-auto px-4 py-8">
+			<h1 className="text-3xl font-bold mb-8 text-center">
+				Evaluación de Entrenamiento Deportivo
+			</h1>
 
+			{prepCountdown !== null && (
+				<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+					<div className="bg-white p-8 rounded-lg shadow-lg text-center">
+						<h2 className="text-2xl font-bold mb-4">Preparación</h2>
+						<p className="text-4xl font-bold text-blue-600">{prepCountdown}</p>
+					</div>
+				</div>
+			)}
+
+			<div className="grid gap-8">
 				<Timer
 					workTime={workTime}
 					recoveryTime={recoveryTime}
-					isRecovery={isRecovery}
 					totalTime={totalTime}
-				/>
-
-				<ControlPanel
-					config={config}
-					onStart={handleStart}
-					onPause={handlePause}
-					onPeriodChange={(period) =>
-						setConfig((c) => ({ ...c, currentPeriod: period }))
-					}
-					onRecoveryTimeChange={(time) =>
-						setConfig((c) => ({ ...c, recoveryTime: time }))
-					}
-					onAthleteCountChange={(count) => {
-						setConfig((c) => ({ ...c, athleteCount: count }));
-						setAthletes((prev) => {
-							if (count > prev.length) {
-								return [
-									...prev,
-									...Array(count - prev.length)
-										.fill(0)
-										.map((_, i) => ({
-											id: prev.length + i + 1,
-											name: "",
-											age: 0,
-											weight: 0,
-											height: 0,
-											active: true,
-											completedPeriods: [],
-										})),
-								];
-							}
-							return prev.slice(0, count);
-						});
-					}}
 				/>
 
 				<StatusDisplay
 					period={position.period}
-					lap={position.lap + 1}
+					lap={position.lap}
 					recoveryTime={config.recoveryTime}
 					activeAthletes={athletes.filter((a) => a.active).length}
 				/>
 
 				<Track position={position} />
 
+				<ControlPanel
+					config={config}
+					onStart={handleStart}
+					onPause={handlePause}
+					onPeriodChange={(period) => {
+						setConfig((c) => ({ ...c, currentPeriod: period }));
+						setPosition((p) => ({ ...p, period }));
+					}}
+					onRecoveryTimeChange={(time) =>
+						setConfig((c) => ({ ...c, recoveryTime: time }))
+					}
+					onAthleteCountChange={(count) => {
+						setConfig((c) => ({ ...c, athleteCount: count }));
+						if (count > athletes.length) {
+							setAthletes((current) => [
+								...current,
+								...Array(count - current.length)
+									.fill(0)
+									.map((_, i) => ({
+										id: current.length + i + 1,
+										name: "",
+										age: 0,
+										weight: 0,
+										height: 0,
+										active: true,
+										completedPeriods: [],
+									})),
+							]);
+						}
+					}}
+				/>
+
 				<AthleteManager
 					athletes={athletes}
 					onAthleteUpdate={handleAthleteUpdate}
-				/>
-
-				<FinishModal
-					isOpen={showFinishModal}
-					onConfirm={handleFinish}
-					onCancel={() => setShowFinishModal(false)}
+					onFinishAthlete={handleFinishAthlete}
+					isRunning={config.isRunning}
 				/>
 			</div>
-			<Toaster position="top-center" richColors />
+
+			<FinishModal
+				show={showFinishModal}
+				onClose={() => setShowFinishModal(false)}
+				onConfirm={handleFinish}
+			/>
+
+			<Toaster position="top-right" />
 		</div>
 	);
 }

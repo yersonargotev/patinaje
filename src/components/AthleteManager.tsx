@@ -6,11 +6,15 @@ import { ExportEvaluations } from "./ExportEvaluations";
 interface AthleteManagerProps {
 	athletes: Athlete[];
 	onAthleteUpdate: (athlete: Athlete) => void;
+	onFinishAthlete: (athleteId: number) => void;
+	isRunning: boolean;
 }
 
 export const AthleteManager: React.FC<AthleteManagerProps> = ({
 	athletes,
 	onAthleteUpdate,
+	onFinishAthlete,
+	isRunning,
 }) => {
 	return (
 		<div className="container mx-auto px-4 py-8">
@@ -139,6 +143,23 @@ export const AthleteManager: React.FC<AthleteManagerProps> = ({
 									<EvaluationHistory />
 								</div>
 							)}
+
+							<div className="flex items-end">
+								{athlete.active && isRunning && (
+									<button
+										type="button"
+										onClick={() => athlete.id && onFinishAthlete(athlete.id)}
+										className="w-full px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+									>
+										Finalizar
+									</button>
+								)}
+								{!athlete.active && (
+									<div className="w-full px-4 py-2 bg-gray-100 text-gray-600 rounded-lg text-center">
+										Finalizado
+									</div>
+								)}
+							</div>
 						</div>
 					))}
 				</div>
