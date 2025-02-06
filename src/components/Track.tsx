@@ -40,11 +40,9 @@ export const Track: React.FC<TrackProps> = ({ position, currentPeriod }) => {
 	const getExpectedSegment = () => {
 		if (!periodData) return null;
 		const totalSegments = 16; // 4 laps * 4 segments
-		const partialTime = periodData.partialTime;
-		const expectedSegment = Math.floor(
-			(position.elapsedTime % partialTime) / (partialTime / totalSegments),
-		);
-		return expectedSegment;
+		const currentSegment =
+			Math.floor(position.elapsedTime / periodData.partialTime) % totalSegments;
+		return currentSegment;
 	};
 
 	const expectedSegment = getExpectedSegment();
