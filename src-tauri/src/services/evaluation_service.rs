@@ -15,6 +15,7 @@ impl From<Athlete> for db::Athlete {
             age: athlete.age,
             weight: athlete.weight,
             height: athlete.height,
+            observations: athlete.observations,
         }
     }
 }
@@ -26,6 +27,7 @@ impl From<EvaluationTemplate> for db::EvaluationTemplate {
             completed_periods: template.completed_periods,
             total_time: template.total_time,
             date: template.date,
+            total_distance: template.total_distance,
         }
     }
 }
@@ -59,6 +61,7 @@ impl EvaluationService {
             completed_periods,
             total_time,
             date: chrono::Local::now().to_rfc3339(),
+            total_distance: 0.0,
         };
 
         let athlete_evaluation = AthleteEvaluation::new(

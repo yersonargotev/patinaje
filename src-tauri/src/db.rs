@@ -12,6 +12,7 @@ pub struct Athlete {
     pub age: i32,
     pub weight: f32,
     pub height: f32,
+    pub observations: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -20,6 +21,7 @@ pub struct EvaluationTemplate {
     pub completed_periods: String,
     pub total_time: i32,
     pub date: String,
+    pub total_distance: f32,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -46,7 +48,8 @@ impl Database {
                 name TEXT NOT NULL,
                 age INTEGER NOT NULL CHECK (age > 0 AND age < 150),
                 weight REAL NOT NULL CHECK (weight > 0),
-                height REAL NOT NULL CHECK (height > 0)
+                height REAL NOT NULL CHECK (height > 0),
+                observations TEXT
             )",
             [],
         )?;
@@ -56,7 +59,8 @@ impl Database {
                 id INTEGER PRIMARY KEY,
                 completed_periods TEXT NOT NULL,
                 total_time INTEGER NOT NULL,
-                date TEXT NOT NULL
+                date TEXT NOT NULL,
+                total_distance REAL NOT NULL DEFAULT 0
             )",
             [],
         )?;
@@ -83,7 +87,41 @@ impl Database {
             eprintln!("Error migrating old evaluations: {}", e);
         }
 
+        // Run migrations
+        db.migrate()?;
+
         Ok(db)
+    }
+
+    fn migrate(&self) -> Result<()> {
+        let conn = self.connection.lock().unwrap();
+        
+        // Add observations column to athletes table if it doesn't exist
+        let columns = conn.query_row(
+            "SELECT sql FROM sqlite_master WHERE type='table' AND name='athletes'",
+            [],
+            |row| row.get::<_, String>(0),
+        )?;
+        
+        if !columns.to_lowercase().contains("observations") {
+            conn.execute("ALTER TABLE athletes ADD COLUMN observations TEXT", [])?;
+        }
+
+        // Add total_distance column to evaluation_templates table if it doesn't exist
+        let columns = conn.query_row(
+            "SELECT sql FROM sqlite_master WHERE type='table' AND name='evaluation_templates'",
+            [],
+            |row| row.get::<_, String>(0),
+        )?;
+        
+        if !columns.to_lowercase().contains("total_distance") {
+            conn.execute(
+                "ALTER TABLE evaluation_templates ADD COLUMN total_distance REAL NOT NULL DEFAULT 0",
+                [],
+            )?;
+        }
+
+        Ok(())
     }
 
     pub fn save_evaluation_data(
@@ -97,12 +135,13 @@ impl Database {
 
         // Save athlete
         tx.execute(
-            "INSERT INTO athletes (name, age, weight, height) VALUES (?1, ?2, ?3, ?4)",
+            "INSERT INTO athletes (name, age, weight, height, observations) VALUES (?1, ?2, ?3, ?4, ?5)",
             [
                 &athlete.name,
                 &athlete.age.to_string(),
                 &athlete.weight.to_string(),
                 &athlete.height.to_string(),
+                &athlete.observations.clone().unwrap_or_default(),
             ],
         )?;
 
@@ -110,12 +149,13 @@ impl Database {
 
         // Save evaluation template
         tx.execute(
-            "INSERT INTO evaluation_templates (completed_periods, total_time, date) 
-             VALUES (?1, ?2, ?3)",
+            "INSERT INTO evaluation_templates (completed_periods, total_time, date, total_distance) 
+             VALUES (?1, ?2, ?3, ?4)",
             [
                 &template.completed_periods,
                 &template.total_time.to_string(),
                 &template.date,
+                &template.total_distance.to_string(),
             ],
         )?;
 
@@ -173,6 +213,7 @@ impl Database {
                     completed_periods: row.get(6)?,
                     total_time: row.get(7)?,
                     date: row.get(8)?,
+                    total_distance: row.get(9)?,
                 }
             ))
         })?;
@@ -292,8 +333,8 @@ impl Database {
         let conn = self.connection.lock().unwrap();
         let mut stmt = conn.prepare(
             "SELECT ae.id, ae.athlete_id, ae.template_id, ae.status, ae.date,
-                    et.id, et.completed_periods, et.total_time, et.date,
-                    a.id, a.name, a.age, a.weight, a.height
+                    et.id, et.completed_periods, et.total_time, et.date, et.total_distance,
+                    a.id, a.name, a.age, a.weight, a.height, a.observations
              FROM athlete_evaluations ae 
              JOIN evaluation_templates et ON ae.template_id = et.id
              JOIN athletes a ON ae.athlete_id = a.id 
@@ -314,13 +355,15 @@ impl Database {
                     completed_periods: row.get(6)?,
                     total_time: row.get(7)?,
                     date: row.get(8)?,
+                    total_distance: row.get(9)?,
                 },
                 Athlete {
-                    id: Some(row.get(9)?),
-                    name: row.get(10)?,
-                    age: row.get(11)?,
-                    weight: row.get(12)?,
-                    height: row.get(13)?,
+                    id: Some(row.get(10)?),
+                    name: row.get(11)?,
+                    age: row.get(12)?,
+                    weight: row.get(13)?,
+                    height: row.get(14)?,
+                    observations: row.get(15)?,
                 }
             ))
         })?;

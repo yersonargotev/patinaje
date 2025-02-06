@@ -6,6 +6,8 @@ export interface Athlete {
 	height: number;
 	active: boolean;
 	completedPeriods: number[];
+	observations?: string;
+	totalDistance: number;
 }
 
 export interface TestConfig {

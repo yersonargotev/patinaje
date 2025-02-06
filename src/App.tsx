@@ -38,6 +38,7 @@ function App() {
 			height: 0,
 			active: true,
 			completedPeriods: [],
+			totalDistance: 0,
 		},
 	]);
 
@@ -382,6 +383,7 @@ function App() {
 										height: 0,
 										active: true,
 										completedPeriods: [],
+										totalDistance: 0,
 									})),
 							]);
 						}

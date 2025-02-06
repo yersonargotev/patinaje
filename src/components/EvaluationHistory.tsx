@@ -17,12 +17,14 @@ interface EvaluationTemplate {
 	completed_periods: string;
 	total_time: number;
 	date: string;
+	total_distance: number;
 }
 
 interface TransformedEvaluation extends Omit<RawEvaluation, "template_id"> {
 	completed_periods: number[];
 	total_time: number;
 	date: string;
+	total_distance: number;
 	athlete: Athlete;
 }
 
@@ -41,6 +43,7 @@ export function EvaluationHistory() {
 				completed_periods: JSON.parse(template.completed_periods),
 				total_time: template.total_time,
 				date: new Date(evaluation.date).toLocaleDateString(),
+				total_distance: template.total_distance,
 				athlete,
 			};
 		},
@@ -128,6 +131,14 @@ export function EvaluationHistory() {
 										</p>
 									</div>
 								</div>
+								{evaluation.athlete.observations && (
+									<div className="mt-2">
+										<span className="text-gray-500">Observaciones:</span>
+										<p className="font-medium">
+											{evaluation.athlete.observations}
+										</p>
+									</div>
+								)}
 							</div>
 							<div className="flex justify-between items-start mb-2">
 								<div>
@@ -138,10 +149,15 @@ export function EvaluationHistory() {
 										{evaluation.status}
 									</span>
 								</div>
-								<span className="text-sm font-medium">
-									Tiempo total: {Math.floor(evaluation.total_time / 60)}:
-									{(evaluation.total_time % 60).toString().padStart(2, "0")}
-								</span>
+								<div className="text-right">
+									<span className="text-sm font-medium block">
+										Tiempo total: {Math.floor(evaluation.total_time / 60)}:
+										{(evaluation.total_time % 60).toString().padStart(2, "0")}
+									</span>
+									<span className="text-sm font-medium block">
+										Distancia total: {evaluation.total_distance} m
+									</span>
+								</div>
 							</div>
 							<div className="mt-2">
 								<h4 className="text-sm font-medium mb-1">

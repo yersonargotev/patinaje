@@ -55,65 +55,109 @@ export const AthleteManager: React.FC<AthleteManagerProps> = ({
 										</div>
 									</div>
 
-									<div className="grid grid-cols-3 gap-2">
+									<div className="grid grid-cols-2 gap-4 mt-2">
 										<div>
 											<label
-												className="block text-sm text-gray-500"
-												htmlFor="age"
+												htmlFor={`age-${athlete.id}`}
+												className="block text-sm font-medium text-gray-700"
 											>
 												Edad
 											</label>
 											<input
+												id={`age-${athlete.id}`}
 												type="number"
 												value={athlete.age || ""}
 												onChange={(e) =>
 													onAthleteUpdate({
 														...athlete,
-														age: Number.parseInt(e.target.value),
+														age: Number.parseInt(e.target.value) || 0,
 													})
 												}
-												className="w-full rounded-md border-1 border-gray-300"
+												placeholder="Edad *"
+												className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+												required={athlete.active}
 											/>
 										</div>
-
 										<div>
 											<label
-												className="block text-sm text-gray-500"
-												htmlFor="weight"
+												htmlFor={`weight-${athlete.id}`}
+												className="block text-sm font-medium text-gray-700"
 											>
 												Peso (kg)
 											</label>
 											<input
+												id={`weight-${athlete.id}`}
 												type="number"
 												step="0.1"
 												value={athlete.weight || ""}
 												onChange={(e) =>
 													onAthleteUpdate({
 														...athlete,
-														weight: Number.parseFloat(e.target.value),
+														weight: Number.parseFloat(e.target.value) || 0,
 													})
 												}
-												className="w-full rounded-md border-1 border-gray-300"
+												placeholder="Peso *"
+												className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+												required={athlete.active}
 											/>
 										</div>
-
 										<div>
 											<label
-												className="block text-sm text-gray-500"
-												htmlFor="height"
+												htmlFor={`height-${athlete.id}`}
+												className="block text-sm font-medium text-gray-700"
 											>
 												Altura (cm)
 											</label>
 											<input
+												id={`height-${athlete.id}`}
 												type="number"
+												step="0.1"
 												value={athlete.height || ""}
 												onChange={(e) =>
 													onAthleteUpdate({
 														...athlete,
-														height: Number.parseFloat(e.target.value),
+														height: Number.parseFloat(e.target.value) || 0,
 													})
 												}
-												className="w-full rounded-md border-1 border-gray-300"
+												placeholder="Altura *"
+												className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+												required={athlete.active}
+											/>
+										</div>
+										<div>
+											<label
+												htmlFor={`observations-${athlete.id}`}
+												className="block text-sm font-medium text-gray-700"
+											>
+												Observaciones
+											</label>
+											<textarea
+												id={`observations-${athlete.id}`}
+												value={athlete.observations || ""}
+												onChange={(e) =>
+													onAthleteUpdate({
+														...athlete,
+														observations: e.target.value,
+													})
+												}
+												placeholder="Observaciones"
+												className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+												rows={2}
+											/>
+										</div>
+										<div>
+											<label
+												htmlFor={`distance-${athlete.id}`}
+												className="block text-sm font-medium text-gray-700"
+											>
+												Distancia Total (m)
+											</label>
+											<input
+												id={`distance-${athlete.id}`}
+												type="number"
+												value={athlete.totalDistance || 0}
+												readOnly
+												className="mt-1 block w-full rounded-md border-gray-300 bg-gray-50 shadow-sm sm:text-sm"
 											/>
 										</div>
 									</div>

@@ -9,6 +9,7 @@ pub struct Athlete {
     pub age: i32,
     pub weight: f32,
     pub height: f32,
+    pub observations: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -17,6 +18,7 @@ pub struct EvaluationTemplate {
     pub completed_periods: String,
     pub total_time: i32,
     pub date: String,
+    pub total_distance: f32,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -53,6 +55,7 @@ impl From<db::Athlete> for Athlete {
             age: athlete.age,
             weight: athlete.weight,
             height: athlete.height,
+            observations: athlete.observations,
         }
     }
 }
@@ -64,6 +67,7 @@ impl From<db::EvaluationTemplate> for EvaluationTemplate {
             completed_periods: template.completed_periods,
             total_time: template.total_time,
             date: template.date,
+            total_distance: template.total_distance,
         }
     }
 }
