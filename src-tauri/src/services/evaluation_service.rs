@@ -54,14 +54,16 @@ impl EvaluationService {
         athlete: Athlete,
         completed_periods: String,
         total_time: i32,
+        total_distance: f32,
         status: String,
     ) -> Result<(i64, i64, i64), String> {
+        let current_date = chrono::Local::now().to_rfc3339();
         let template = EvaluationTemplate {
             id: None,
             completed_periods,
             total_time,
-            date: chrono::Local::now().to_rfc3339(),
-            total_distance: 0.0,
+            date: current_date.clone(),
+            total_distance,
         };
 
         let athlete_evaluation = AthleteEvaluation::new(

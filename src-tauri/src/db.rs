@@ -1,6 +1,6 @@
 use chrono::NaiveDateTime;
 use csv::Writer;
-use rusqlite::{Connection, Result};
+use rusqlite::{Connection, Result, params};
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 use std::sync::Mutex;
@@ -136,12 +136,12 @@ impl Database {
         // Save athlete
         tx.execute(
             "INSERT INTO athletes (name, age, weight, height, observations) VALUES (?1, ?2, ?3, ?4, ?5)",
-            [
-                &athlete.name,
-                &athlete.age.to_string(),
-                &athlete.weight.to_string(),
-                &athlete.height.to_string(),
-                &athlete.observations.clone().unwrap_or_default(),
+            params![
+                athlete.name,
+                athlete.age,
+                athlete.weight,
+                athlete.height,
+                athlete.observations,
             ],
         )?;
 

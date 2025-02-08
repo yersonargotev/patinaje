@@ -22,14 +22,26 @@ struct ServiceState(Arc<EvaluationService>);
 
 #[tauri::command]
 async fn save_evaluation_data(
+    state: State<'_, ServiceState>,
+    app: tauri::AppHandle,
     athlete: Athlete,
     completed_periods: String,
     total_time: i32,
+    total_distance: f32,
     status: String,
-    state: State<'_, ServiceState>,
-    app: tauri::AppHandle,
 ) -> Result<String, String> {
-    state.0.save_evaluation(athlete, completed_periods, total_time, status)
+    // Validar los datos antes de guardar
+    if athlete.age <= 0 || athlete.age >= 150 {
+        return Err("La edad debe estar entre 1 y 149 años".to_string());
+    }
+    if athlete.weight <= 0.0 {
+        return Err("El peso debe ser mayor que 0".to_string());
+    }
+    if athlete.height <= 0.0 {
+        return Err("La altura debe ser mayor que 0".to_string());
+    }
+
+    state.0.save_evaluation(athlete, completed_periods, total_time, total_distance, status)
         .await
         .map(|(athlete_id, template_id, eval_id)| {
             let _ = app.emit("evaluation-completed", ());

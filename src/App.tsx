@@ -9,7 +9,7 @@ import { Timer } from "./components/Timer";
 import { Track } from "./components/Track";
 import type { Athlete, TestConfig, TrackPosition } from "./types";
 import { AudioService } from "./utils/audio";
-import { calculateIntervalTime } from "./utils/timing";
+import { calculateTotalDistance, calculateIntervalTime } from "./utils/timing";
 import { Toaster, toast } from "sonner";
 
 function App() {
@@ -131,7 +131,25 @@ function App() {
 
 			workTimer.current = window.setInterval(() => {
 				setWorkTime((t) => t + 1);
-				setPosition((prev) => ({ ...prev, elapsedTime: prev.elapsedTime + 1 }));
+				setPosition((prev) => {
+					const newElapsedTime = prev.elapsedTime + 1;
+					// Calculate new distance for active athletes
+					setAthletes((currentAthletes) =>
+						currentAthletes.map((athlete) =>
+							athlete.active
+								? {
+										...athlete,
+										totalDistance: calculateTotalDistance(
+											position.period,
+											newElapsedTime,
+											athlete.completedPeriods,
+										),
+									}
+								: athlete,
+						),
+					);
+					return { ...prev, elapsedTime: newElapsedTime };
+				});
 			}, 1000);
 
 			const interval = calculateIntervalTime(config.currentPeriod);
@@ -141,16 +159,6 @@ function App() {
 				setPosition((prev) => {
 					const newSegment = (prev.segment + 1) % 4;
 					const newLap = newSegment === 0 ? (prev.lap + 1) % 4 : prev.lap;
-
-					if (prev.period === position.period) {
-						setAthletes((currentAthletes) =>
-							currentAthletes.map((athlete) =>
-								athlete.active
-									? { ...athlete, totalDistance: athlete.totalDistance + 50 }
-									: athlete,
-							),
-						);
-					}
 
 					if (newLap === 0 && newSegment === 0) {
 						// Update completed periods for active athletes
@@ -174,7 +182,7 @@ function App() {
 							period: prev.period + 1,
 							lap: 0,
 							segment: 0,
-							elapsedTime: prev.elapsedTime,
+							elapsedTime: 0, // Reset elapsed time for new period
 						};
 					}
 
@@ -206,6 +214,24 @@ function App() {
 				throw new Error("Tauri invoke no está disponible");
 			}
 
+			// Validar datos antes de enviar
+			const invalidAthletes = athletes
+				.filter((a) => a.active)
+				.filter(
+					(athlete) =>
+						!athlete.name.trim() ||
+						athlete.age <= 0 ||
+						athlete.weight <= 0 ||
+						athlete.height <= 0,
+				);
+
+			if (invalidAthletes.length > 0) {
+				toast.error(
+					"Por favor complete todos los datos requeridos de los deportistas activos antes de finalizar.",
+				);
+				return;
+			}
+
 			// Save data for each active athlete using Promise.all for better performance
 			await Promise.all(
 				athletes
@@ -221,6 +247,7 @@ function App() {
 								},
 								completedPeriods: JSON.stringify(athlete.completedPeriods),
 								totalTime,
+								totalDistance: athlete.totalDistance,
 								status: "completed",
 							});
 						} catch (error) {
@@ -228,7 +255,11 @@ function App() {
 								`Error saving evaluation for ${athlete.name}:`,
 								error,
 							);
-							throw error;
+							throw new Error(
+								error instanceof Error
+									? error.message
+									: "Error al guardar la evaluación",
+							);
 						}
 					}),
 			);
@@ -236,7 +267,11 @@ function App() {
 			toast.success("Evaluaciones guardadas correctamente");
 		} catch (error) {
 			console.error("Error saving evaluations:", error);
-			toast.error("Error al guardar las evaluaciones");
+			toast.error(
+				error instanceof Error
+					? error.message
+					: "Error al guardar las evaluaciones",
+			);
 		}
 	};
 
@@ -255,6 +290,7 @@ function App() {
 				},
 				completedPeriods: JSON.stringify(athlete.completedPeriods),
 				totalTime,
+				totalDistance: athlete.totalDistance,
 				status: "completed",
 			});
 

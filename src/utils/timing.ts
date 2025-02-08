@@ -37,3 +37,42 @@ export const getDistanceForPeriod = (period: number): number => {
 
 	return periodData.distance;
 };
+
+export const calculateDistance = (
+	period: number,
+	elapsedTime: number,
+): number => {
+	const periodData = getPeriodData(period);
+	if (!periodData) return 0;
+
+	// Calculate how many complete laps have been done
+	const completeLaps = Math.floor(elapsedTime / periodData.lapTime);
+
+	// Calculate remaining time for partial lap
+	const remainingTime = elapsedTime % periodData.lapTime;
+
+	// Calculate segments completed in partial lap
+	const partialSegments = Math.floor(remainingTime / periodData.partialTime);
+
+	// Each lap is 200m (4 segments of 50m each)
+	const totalDistance = completeLaps * 200 + partialSegments * 50;
+
+	return totalDistance;
+};
+
+export const calculateTotalDistance = (
+	currentPeriod: number,
+	elapsedTime: number,
+	completedPeriods: number[],
+): number => {
+	// Calculate distance from completed periods
+	const completedDistance = completedPeriods.reduce((total, period) => {
+		const periodData = getPeriodData(period);
+		return total + (periodData?.distance || 0);
+	}, 0);
+
+	// Calculate distance from current period
+	const currentDistance = calculateDistance(currentPeriod, elapsedTime);
+
+	return completedDistance + currentDistance;
+};
