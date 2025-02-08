@@ -404,6 +404,8 @@ function App() {
 										totalDistance: 0,
 									})),
 							]);
+						} else if (count < athletes.length) {
+							setAthletes((current) => current.slice(0, count));
 						}
 					}}
 				/>
