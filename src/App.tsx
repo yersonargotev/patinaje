@@ -127,7 +127,10 @@ function App() {
 			!config.isFinished &&
 			!isRecovery
 		) {
-			setWorkTime(0);
+			// Solo inicializamos workTime si no estamos reanudando
+			if (!config.isPaused) {
+				setWorkTime(0);
+			}
 
 			workTimer.current = window.setInterval(() => {
 				setWorkTime((t) => t + 1);
@@ -340,7 +343,11 @@ function App() {
 		isStartingRef.current = true;
 
 		try {
-			if (!isRecovery) {
+			if (config.isPaused) {
+				// Si estaba pausado, simplemente reanudamos sin reiniciar nada
+				setConfig((c) => ({ ...c, isRunning: true, isPaused: false }));
+				// No reproducimos ningún sonido al reanudar para no interrumpir
+			} else if (!isRecovery) {
 				// Start 10-second preparation countdown
 				setPrepCountdown(10);
 				const countdownInterval = setInterval(() => {
@@ -371,7 +378,8 @@ function App() {
 	};
 
 	const handlePause = () => {
-		setConfig((c) => ({ ...c, isPaused: true }));
+		setConfig((c) => ({ ...c, isRunning: false, isPaused: true }));
+		audioService.current?.announceTestPaused();
 	};
 
 	const handleAthleteUpdate = (updatedAthlete: Athlete) => {
