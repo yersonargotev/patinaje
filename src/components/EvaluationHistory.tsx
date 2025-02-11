@@ -3,6 +3,8 @@ import { listen } from "@tauri-apps/api/event";
 import { useEffect, useState, useCallback } from "react";
 import { toast } from "sonner";
 import type { Athlete } from "../types";
+import { EditObservationsModal } from "./EditObservationsModal";
+import { Pencil } from "lucide-react";
 
 interface RawEvaluation {
 	id: number;
@@ -31,6 +33,8 @@ interface TransformedEvaluation extends Omit<RawEvaluation, "template_id"> {
 export function EvaluationHistory() {
 	const [evaluations, setEvaluations] = useState<TransformedEvaluation[]>([]);
 	const [loading, setLoading] = useState(true);
+	const [selectedEvaluation, setSelectedEvaluation] =
+		useState<TransformedEvaluation | null>(null);
 
 	const transformCallback = useCallback(
 		([evaluation, template, athlete]: [
@@ -106,9 +110,19 @@ export function EvaluationHistory() {
 							className="bg-white p-4 rounded-lg shadow-sm border border-gray-200"
 						>
 							<div className="border-b pb-4 mb-4">
-								<h4 className="text-lg font-semibold mb-2">
-									Información del Atleta
-								</h4>
+								<div className="flex justify-between items-start mb-2">
+									<h4 className="text-lg font-semibold">
+										Información del Atleta
+									</h4>
+									<button
+										type="button"
+										onClick={() => setSelectedEvaluation(evaluation)}
+										className="p-2 text-gray-600 hover:text-blue-600 rounded-full hover:bg-blue-50 transition-colors"
+										title="Editar observaciones"
+									>
+										<Pencil className="w-4 h-4" />
+									</button>
+								</div>
 								<div className="grid grid-cols-4 gap-4 text-sm">
 									<div>
 										<span className="text-gray-500">Nombre:</span>
@@ -178,6 +192,14 @@ export function EvaluationHistory() {
 					))}
 				</div>
 			)}
+
+			<EditObservationsModal
+				show={selectedEvaluation !== null}
+				onClose={() => setSelectedEvaluation(null)}
+				evaluationId={selectedEvaluation?.id || 0}
+				initialObservations={selectedEvaluation?.athlete.observations || ""}
+				onSuccess={fetchEvaluations}
+			/>
 		</div>
 	);
 }

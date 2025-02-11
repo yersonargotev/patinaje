@@ -109,4 +109,13 @@ impl EvaluationService {
                 (eval.into(), template.into(), athlete.into())).collect())
             .map_err(|e| e.to_string())
     }
+
+    pub async fn update_evaluation_observations(
+        &self,
+        evaluation_id: i64,
+        observations: String,
+    ) -> Result<(), String> {
+        self.db.update_evaluation_observations(evaluation_id, observations)
+            .map_err(|e| e.to_string())
+    }
 } 

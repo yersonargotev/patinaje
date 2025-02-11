@@ -436,4 +436,22 @@ impl Database {
         tx.commit()?;
         Ok(())
     }
+
+    pub fn update_evaluation_observations(
+        &self,
+        evaluation_id: i64,
+        observations: String,
+    ) -> Result<()> {
+        let conn = self.connection.lock().unwrap();
+        conn.execute(
+            "UPDATE athletes SET observations = ?1 
+             WHERE id = (
+                SELECT athlete_id 
+                FROM athlete_evaluations 
+                WHERE id = ?2
+             )",
+            params![observations, evaluation_id],
+        )?;
+        Ok(())
+    }
 }

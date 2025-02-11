@@ -100,6 +100,18 @@ async fn get_all_evaluations(
     state.0.get_all_evaluations().await
 }
 
+#[tauri::command]
+async fn update_evaluation_observations(
+    evaluation_id: i64,
+    observations: String,
+    state: State<'_, ServiceState>,
+) -> Result<String, String> {
+    state.0.update_evaluation_observations(evaluation_id, observations)
+        .await
+        .map(|_| "Observaciones actualizadas exitosamente".to_string())
+        .map_err(|e| e.to_string())
+}
+
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
@@ -122,7 +134,8 @@ fn main() {
             get_athlete_evaluations,
             get_all_evaluations,
             export_all_evaluations,
-            export_athlete_evaluations
+            export_athlete_evaluations,
+            update_evaluation_observations
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
