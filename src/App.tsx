@@ -145,7 +145,6 @@ function App() {
 										totalDistance: calculateTotalDistance(
 											position.period,
 											newElapsedTime,
-											athlete.completedPeriods,
 										),
 									}
 								: athlete,

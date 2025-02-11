@@ -63,7 +63,6 @@ export const calculateDistance = (
 export const calculateTotalDistance = (
 	currentPeriod: number,
 	elapsedTime: number,
-	completedPeriods: number[],
 ): number => {
 	// Only calculate distance from current period
 	return calculateDistance(currentPeriod, elapsedTime);
