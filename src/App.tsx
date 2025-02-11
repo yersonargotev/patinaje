@@ -385,6 +385,9 @@ function App() {
 				// Play work start announcement
 				await audioService.current?.announceWorkStart();
 
+				// Wait for 3 seconds after work start announcement
+				await new Promise((resolve) => setTimeout(resolve, 3000));
+
 				// Start the test
 				setConfig((c) => ({ ...c, isRunning: true, isPaused: false }));
 			} else {
