@@ -57,8 +57,18 @@ impl ThreadSafeAudioPlayer {
                                             sink.append(source);
                                             sink.play();
 
-                                            // Esperar un pequeño momento para asegurar que el audio comience
-                                            std::thread::sleep(Duration::from_millis(50));
+                                            // Esperar a que termine el audio antes de continuar
+                                            // Esto es especialmente importante para la secuencia de cuenta regresiva
+                                            if sound_type.contains("prep") || 
+                                               sound_type.contains("seconds") || 
+                                               sound_type.contains("countdown") {
+                                                while !sink.empty() {
+                                                    std::thread::sleep(Duration::from_millis(100));
+                                                }
+                                            } else {
+                                                // Para otros sonidos, solo esperar un momento para asegurar que comience
+                                                std::thread::sleep(Duration::from_millis(50));
+                                            }
                                         }
                                         Err(e) => {
                                             eprintln!("Error decoding audio {}: {}", sound_type, e)

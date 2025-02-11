@@ -23,6 +23,10 @@ export class AudioService {
 			"pi",
 			"five-to-one",
 			"test-paused",
+			"prep-start",
+			"fifteen-seconds",
+			"ten-seconds",
+			"countdown",
 		];
 
 		if (this.isTauri) {
@@ -58,9 +62,9 @@ export class AudioService {
 	public async playCountdown(): Promise<void> {
 		await this.ensureInitialized();
 		await this.stopAll();
-		await this.internalPlaySound("five-to-one");
-		// Esperar a que termine la cuenta regresiva (2 segundos)
-		await new Promise((resolve) => setTimeout(resolve, 2000));
+
+		// Play "15 seconds" announcement
+		await this.internalPlaySound("fifteen-seconds");
 	}
 
 	private async internalPlaySound(soundName: string): Promise<void> {

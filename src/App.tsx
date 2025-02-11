@@ -10,6 +10,7 @@ import { Track } from "./components/Track";
 import type { Athlete, TestConfig, TrackPosition } from "./types";
 import { AudioService } from "./utils/audio";
 import { calculateTotalDistance, calculateIntervalTime } from "./utils/timing";
+import { getPeriodData } from "./utils/testData";
 import { Toaster, toast } from "sonner";
 
 function App() {
@@ -130,10 +131,26 @@ function App() {
 			// Solo inicializamos workTime si no estamos reanudando
 			if (!config.isPaused) {
 				setWorkTime(0);
+				// Play initial beep at the start of the period
+				audioService.current?.playIntervalBeep();
 			}
 
 			workTimer.current = window.setInterval(() => {
-				setWorkTime((t) => t + 1);
+				setWorkTime((t) => {
+					const newTime = t + 1;
+					const periodData = getPeriodData(position.period);
+
+					// Play beep at partial time intervals
+					if (
+						periodData &&
+						newTime % Math.floor(periodData.partialTime) === 0
+					) {
+						audioService.current?.playIntervalBeep();
+					}
+
+					return newTime;
+				});
+
 				setPosition((prev) => {
 					const newElapsedTime = prev.elapsedTime + 1;
 					// Calculate new distance for active athletes
@@ -156,8 +173,6 @@ function App() {
 
 			const interval = calculateIntervalTime(config.currentPeriod);
 			timer = window.setInterval(() => {
-				audioService.current?.playIntervalBeep();
-
 				setPosition((prev) => {
 					const newSegment = (prev.segment + 1) % 4;
 					const newLap = newSegment === 0 ? (prev.lap + 1) % 4 : prev.lap;
@@ -347,8 +362,13 @@ function App() {
 				setConfig((c) => ({ ...c, isRunning: true, isPaused: false }));
 				// No reproducimos ningún sonido al reanudar para no interrumpir
 			} else if (!isRecovery) {
-				// Start 10-second preparation countdown
-				setPrepCountdown(10);
+				// Start 15-second preparation countdown
+				setPrepCountdown(15);
+
+				// Start audio sequence
+				await audioService.current?.playCountdown();
+
+				// Start visual countdown after audio sequence starts
 				const countdownInterval = setInterval(() => {
 					setPrepCountdown((prev) => {
 						if (prev === null || prev <= 1) {
@@ -359,11 +379,13 @@ function App() {
 					});
 				}, 1000);
 
-				// Wait for countdown to complete
-				await new Promise((resolve) => setTimeout(resolve, 10000));
+				// Wait for 2 seconds after countdown ends
+				await new Promise((resolve) => setTimeout(resolve, 15000));
 
-				await audioService.current?.playCountdown();
+				// Play work start announcement
 				await audioService.current?.announceWorkStart();
+
+				// Start the test
 				setConfig((c) => ({ ...c, isRunning: true, isPaused: false }));
 			} else {
 				setConfig((c) => ({ ...c, isRunning: true, isPaused: false }));
