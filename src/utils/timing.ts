@@ -65,14 +65,6 @@ export const calculateTotalDistance = (
 	elapsedTime: number,
 	completedPeriods: number[],
 ): number => {
-	// Calculate distance from completed periods
-	const completedDistance = completedPeriods.reduce((total, period) => {
-		const periodData = getPeriodData(period);
-		return total + (periodData?.distance || 0);
-	}, 0);
-
-	// Calculate distance from current period
-	const currentDistance = calculateDistance(currentPeriod, elapsedTime);
-
-	return completedDistance + currentDistance;
+	// Only calculate distance from current period
+	return calculateDistance(currentPeriod, elapsedTime);
 };
