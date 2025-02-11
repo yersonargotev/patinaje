@@ -30,6 +30,7 @@ chrono = "0.4.39"
 csv = "1.3.0"
 tauri-plugin-dialog = "2"
 tauri-plugin-sql = { version = "2.2.0", features = ["sqlite"] }
+rust_xlsxwriter = "0.84.0"
 
 [features]
 custom-protocol = ["tauri/custom-protocol"]

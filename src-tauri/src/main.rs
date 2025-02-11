@@ -112,6 +112,29 @@ async fn update_evaluation_observations(
         .map_err(|e| e.to_string())
 }
 
+#[tauri::command]
+async fn export_all_evaluations_to_xlsx(
+    path: PathBuf,
+    state: State<'_, ServiceState>,
+) -> Result<String, String> {
+    state.0.export_all_evaluations_to_xlsx(path)
+        .await
+        .map(|_| "Evaluaciones exportadas exitosamente a Excel".to_string())
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+async fn export_athlete_evaluations_to_xlsx(
+    athlete_id: i64,
+    path: PathBuf,
+    state: State<'_, ServiceState>,
+) -> Result<String, String> {
+    state.0.export_athlete_evaluations_to_xlsx(athlete_id, path)
+        .await
+        .map(|_| "Evaluaciones del atleta exportadas exitosamente a Excel".to_string())
+        .map_err(|e| e.to_string())
+}
+
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
@@ -135,6 +158,8 @@ fn main() {
             get_all_evaluations,
             export_all_evaluations,
             export_athlete_evaluations,
+            export_all_evaluations_to_xlsx,
+            export_athlete_evaluations_to_xlsx,
             update_evaluation_observations
         ])
         .run(tauri::generate_context!())

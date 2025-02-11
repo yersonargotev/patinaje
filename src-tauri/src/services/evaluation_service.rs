@@ -118,4 +118,21 @@ impl EvaluationService {
         self.db.update_evaluation_observations(evaluation_id, observations)
             .map_err(|e| e.to_string())
     }
+
+    pub async fn export_all_evaluations_to_xlsx(
+        &self,
+        path: PathBuf,
+    ) -> Result<(), String> {
+        self.db.export_all_evaluations_to_xlsx(path)
+            .map_err(|e| e.to_string())
+    }
+
+    pub async fn export_athlete_evaluations_to_xlsx(
+        &self,
+        athlete_id: i64,
+        path: PathBuf,
+    ) -> Result<(), String> {
+        self.db.export_athlete_evaluations_to_xlsx(athlete_id, path)
+            .map_err(|e| e.to_string())
+    }
 } 

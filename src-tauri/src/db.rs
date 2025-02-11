@@ -1,5 +1,6 @@
 use chrono::NaiveDateTime;
 use csv::Writer;
+use rust_xlsxwriter::{Workbook, Format};
 use rusqlite::{Connection, Result, params};
 use serde::{Deserialize, Serialize};
 use std::path::Path;
@@ -452,6 +453,134 @@ impl Database {
              )",
             params![observations, evaluation_id],
         )?;
+        Ok(())
+    }
+
+    pub fn export_all_evaluations_to_xlsx<P: AsRef<Path>>(
+        &self,
+        path: P,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        let conn = self.connection.lock().unwrap();
+        let mut stmt = conn.prepare(
+            "SELECT ae.id, ae.athlete_id, a.name, et.completed_periods, et.total_time, ae.date, ae.status, 
+                    a.observations, et.total_distance
+             FROM athlete_evaluations ae 
+             JOIN athletes a ON ae.athlete_id = a.id 
+             JOIN evaluation_templates et ON ae.template_id = et.id
+             ORDER BY ae.date DESC"
+        )?;
+
+        let mut workbook = Workbook::new();
+        let worksheet = workbook.add_worksheet();
+
+        let header_format = Format::new()
+            .set_bold()
+            .set_pattern(rust_xlsxwriter::FormatPattern::Solid)
+            .set_background_color(0xD0E0F0);
+
+        // Write headers
+        let headers = ["ID", "Atleta ID", "Nombre del Atleta", "Periodos Completados", 
+                      "Tiempo Total (s)", "Fecha", "Estado", "Observaciones", "Distancia Total (m)"];
+        for (col, header) in headers.iter().enumerate() {
+            worksheet.write_string_with_format(0, col as u16, *header, &header_format)?;
+            worksheet.set_column_width(col as u16, 15)?;
+        }
+
+        let rows = stmt.query_map([], |row| {
+            Ok((
+                row.get::<_, i64>(0)?,
+                row.get::<_, i64>(1)?,
+                row.get::<_, String>(2)?,
+                row.get::<_, String>(3)?,
+                row.get::<_, i32>(4)?,
+                row.get::<_, String>(5)?,
+                row.get::<_, String>(6)?,
+                row.get::<_, Option<String>>(7)?.unwrap_or_default(),
+                row.get::<_, f32>(8)?,
+            ))
+        })?;
+
+        let mut row_num = 1;
+        for row in rows {
+            let (id, athlete_id, name, periods, time, date, status, observations, total_distance) = row?;
+            worksheet.write_number(row_num, 0, id as f64)?;
+            worksheet.write_number(row_num, 1, athlete_id as f64)?;
+            worksheet.write_string(row_num, 2, &name)?;
+            worksheet.write_string(row_num, 3, &periods)?;
+            worksheet.write_number(row_num, 4, time as f64)?;
+            worksheet.write_string(row_num, 5, &date)?;
+            worksheet.write_string(row_num, 6, &status)?;
+            worksheet.write_string(row_num, 7, &observations)?;
+            worksheet.write_number(row_num, 8, total_distance as f64)?;
+            row_num += 1;
+        }
+
+        workbook.save(path)?;
+        Ok(())
+    }
+
+    pub fn export_athlete_evaluations_to_xlsx<P: AsRef<Path>>(
+        &self,
+        athlete_id: i64,
+        path: P,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        let conn = self.connection.lock().unwrap();
+        let mut stmt = conn.prepare(
+            "SELECT ae.id, ae.athlete_id, a.name, et.completed_periods, et.total_time, ae.date, ae.status,
+                    a.observations, et.total_distance
+             FROM athlete_evaluations ae 
+             JOIN athletes a ON ae.athlete_id = a.id 
+             JOIN evaluation_templates et ON ae.template_id = et.id
+             WHERE ae.athlete_id = ?1
+             ORDER BY ae.date DESC"
+        )?;
+
+        let mut workbook = Workbook::new();
+        let worksheet = workbook.add_worksheet();
+
+        let header_format = Format::new()
+            .set_bold()
+            .set_pattern(rust_xlsxwriter::FormatPattern::Solid)
+            .set_background_color(0xD0E0F0);
+
+        // Write headers
+        let headers = ["ID", "Atleta ID", "Nombre del Atleta", "Periodos Completados", 
+                      "Tiempo Total (s)", "Fecha", "Estado", "Observaciones", "Distancia Total (m)"];
+        for (col, header) in headers.iter().enumerate() {
+            worksheet.write_string_with_format(0, col as u16, *header, &header_format)?;
+            worksheet.set_column_width(col as u16, 15)?;
+        }
+
+        let rows = stmt.query_map([athlete_id], |row| {
+            Ok((
+                row.get::<_, i64>(0)?,
+                row.get::<_, i64>(1)?,
+                row.get::<_, String>(2)?,
+                row.get::<_, String>(3)?,
+                row.get::<_, i32>(4)?,
+                row.get::<_, String>(5)?,
+                row.get::<_, String>(6)?,
+                row.get::<_, Option<String>>(7)?.unwrap_or_default(),
+                row.get::<_, f32>(8)?,
+            ))
+        })?;
+
+        let mut row_num = 1;
+        for row in rows {
+            let (id, athlete_id, name, periods, time, date, status, observations, total_distance) = row?;
+            worksheet.write_number(row_num, 0, id as f64)?;
+            worksheet.write_number(row_num, 1, athlete_id as f64)?;
+            worksheet.write_string(row_num, 2, &name)?;
+            worksheet.write_string(row_num, 3, &periods)?;
+            worksheet.write_number(row_num, 4, time as f64)?;
+            worksheet.write_string(row_num, 5, &date)?;
+            worksheet.write_string(row_num, 6, &status)?;
+            worksheet.write_string(row_num, 7, &observations)?;
+            worksheet.write_number(row_num, 8, total_distance as f64)?;
+            row_num += 1;
+        }
+
+        workbook.save(path)?;
         Ok(())
     }
 }
