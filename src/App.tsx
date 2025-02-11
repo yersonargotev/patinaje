@@ -388,6 +388,53 @@ function App() {
 		);
 	};
 
+	const handleReset = () => {
+		// Reset config to initial state
+		setConfig({
+			recoveryTime: 45,
+			currentPeriod: 2,
+			athleteCount: 1,
+			isRunning: false,
+			isPaused: false,
+			isFinished: false,
+		});
+
+		// Reset position
+		setPosition({
+			period: 2,
+			lap: 0,
+			segment: 0,
+			elapsedTime: 0,
+		});
+
+		// Reset athletes to initial state
+		setAthletes([
+			{
+				id: 1,
+				name: "",
+				age: 0,
+				weight: 0,
+				height: 0,
+				active: true,
+				completedPeriods: [],
+				totalDistance: 0,
+			},
+		]);
+
+		// Reset all timers and states
+		setIsRecovery(false);
+		setWorkTime(0);
+		setTotalTime(0);
+		setPrepCountdown(null);
+
+		// Clear any running intervals/timeouts
+		if (workTimer.current) clearInterval(workTimer.current);
+		if (recoveryTimer.current) clearTimeout(recoveryTimer.current);
+		if (totalTimeInterval.current) clearInterval(totalTimeInterval.current);
+
+		toast.success("Test reiniciado correctamente");
+	};
+
 	return (
 		<div className="container mx-auto px-4 py-8">
 			<h1 className="text-3xl font-bold mb-8 text-center">
@@ -423,6 +470,7 @@ function App() {
 					config={config}
 					onStart={handleStart}
 					onPause={handlePause}
+					onReset={handleReset}
 					onPeriodChange={(period) => {
 						setConfig((c) => ({ ...c, currentPeriod: period }));
 						setPosition((p) => ({ ...p, period }));

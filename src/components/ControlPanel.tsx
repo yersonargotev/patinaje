@@ -9,6 +9,7 @@ interface ControlPanelProps {
 	onPeriodChange: (period: number) => void;
 	onRecoveryTimeChange: (time: number) => void;
 	onAthleteCountChange: (count: number) => void;
+	onReset: () => void;
 }
 
 export const ControlPanel: React.FC<ControlPanelProps> = ({
@@ -18,29 +19,40 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
 	onPeriodChange,
 	onRecoveryTimeChange,
 	onAthleteCountChange,
+	onReset,
 }) => {
 	getPeriodData(config.currentPeriod);
 
 	return (
 		<div className="bg-white p-4 rounded-lg shadow-md">
 			<div className="flex items-center justify-between mb-4">
-				<button
-					type="button"
-					onClick={config.isRunning ? onPause : onStart}
-					className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-				>
-					{config.isRunning ? (
-						<>
-							<Pause className="w-4 h-4 mr-2" />
-							Pausar
-						</>
-					) : (
-						<>
-							<Play className="w-4 h-4 mr-2" />
-							{config.isPaused ? "Reanudar" : "Empezar"}
-						</>
-					)}
-				</button>
+				<div className="flex items-center space-x-2">
+					<button
+						type="button"
+						onClick={config.isRunning ? onPause : onStart}
+						className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+					>
+						{config.isRunning ? (
+							<>
+								<Pause className="w-4 h-4 mr-2" />
+								Pausar
+							</>
+						) : (
+							<>
+								<Play className="w-4 h-4 mr-2" />
+								{config.isPaused ? "Reanudar" : "Empezar"}
+							</>
+						)}
+					</button>
+					<button
+						type="button"
+						onClick={onReset}
+						className="flex items-center px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700"
+						disabled={config.isRunning}
+					>
+						Nuevo Test
+					</button>
+				</div>
 
 				<div className="flex items-center space-x-4">
 					<div>
