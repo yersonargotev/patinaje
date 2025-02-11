@@ -53,7 +53,7 @@ export const Track: React.FC<TrackProps> = ({ position, currentPeriod }) => {
 		const trackHeight = 90; // Height percentage of the track
 		const centerX = 50; // Center X percentage
 		const centerY = 50; // Center Y percentage
-		const angle = (segmentIdx / 4) * Math.PI * 2 + Math.PI / 2; // Start from top
+		const angle = -(segmentIdx / 4) * Math.PI * 2 - Math.PI / 2; // Start from top, negative for counterclockwise
 
 		// Adjust radius based on lap (outer to inner)
 		const radiusX = trackWidth / 2 - lapIdx * 5; // Decrease radius for inner laps
