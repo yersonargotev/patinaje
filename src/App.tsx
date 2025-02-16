@@ -46,15 +46,25 @@ function App() {
 
 	const [isRecovery, setIsRecovery] = useState(false);
 	const [workTime, setWorkTime] = useState(0);
-	const [recoveryTime] = useState(0);
+	const [currentRecoveryTime, setCurrentRecoveryTime] = useState(0);
 	const [totalTime, setTotalTime] = useState(0);
 	const [prepCountdown, setPrepCountdown] = useState<number | null>(null);
 
 	const audioService = useRef<AudioService>(new AudioService());
 	const workTimer = useRef<number>();
 	const recoveryTimer = useRef<number>();
+	const recoveryInterval = useRef<number>();
 	const totalTimeInterval = useRef<number>();
 	const isStartingRef = useRef(false);
+
+	// Limpiar temporizadores al desmontar
+	useEffect(() => {
+		return () => {
+			if (totalTimeInterval.current) clearInterval(totalTimeInterval.current);
+			if (recoveryTimer.current) clearTimeout(recoveryTimer.current);
+			if (recoveryInterval.current) clearInterval(recoveryInterval.current);
+		};
+	}, []);
 
 	useEffect(() => {
 		audioService.current.preloadAll().catch((error) => {
@@ -71,54 +81,6 @@ function App() {
 		};
 	}, []);
 
-	// Temporizador de recuperación
-	useEffect(() => {
-		const startRecovery = async () => {
-			if (isStartingRef.current) return;
-			isStartingRef.current = true;
-
-			try {
-				// Reproducir cuenta regresiva para recuperación
-				await audioService.current?.playCountdown();
-				await audioService.current?.announceRecoveryStart();
-
-				// Iniciar el temporizador de recuperación después de la cuenta regresiva
-				recoveryTimer.current = window.setTimeout(() => {
-					setIsRecovery(false);
-					audioService.current?.announceRecoveryComplete();
-				}, config.recoveryTime * 1000);
-			} finally {
-				isStartingRef.current = false;
-			}
-		};
-
-		if (isRecovery && config.isRunning && !config.isPaused) {
-			startRecovery();
-		}
-
-		return () => {
-			if (recoveryTimer.current) {
-				clearTimeout(recoveryTimer.current);
-			}
-		};
-	}, [isRecovery, config.isRunning, config.isPaused, config.recoveryTime]);
-
-	useEffect(() => {
-		if (config.isRunning && !config.isPaused && !config.isFinished) {
-			totalTimeInterval.current = window.setInterval(() => {
-				setTotalTime((t) => t + 0.1);
-			}, 100);
-		} else if (totalTimeInterval.current) {
-			clearInterval(totalTimeInterval.current);
-		}
-
-		return () => {
-			if (totalTimeInterval.current) {
-				clearInterval(totalTimeInterval.current);
-			}
-		};
-	}, [config.isRunning, config.isPaused, config.isFinished]);
-
 	useEffect(() => {
 		if (
 			config.isRunning &&
@@ -129,10 +91,10 @@ function App() {
 			const periodData = getPeriodData(position.period);
 			if (!periodData) return;
 
-			// Inicializar workTime si no estamos reanudando
+			// Inicializar workTime
 			if (!config.isPaused) {
 				setWorkTime(0);
-				// Play initial beep at the start of the period
+				// Reproducir beep inicial al comenzar el periodo
 				audioService.current?.playIntervalBeep();
 			}
 
@@ -140,7 +102,7 @@ function App() {
 			let lastBeepTime = 0;
 			let animationFrameId: number;
 
-			const updateTimer = (currentTime: number) => {
+			const updateTimer = async (currentTime: number) => {
 				const elapsed = (currentTime - startTime) / 1000; // Convertir a segundos
 				setWorkTime(elapsed);
 
@@ -176,6 +138,8 @@ function App() {
 
 				// Verificar si hemos alcanzado el tiempo total del periodo
 				if (elapsed >= periodData.totalTime) {
+					cancelAnimationFrame(animationFrameId);
+
 					// Actualizar completed periods para atletas activos
 					setAthletes((currentAthletes) =>
 						currentAthletes.map((athlete) =>
@@ -191,8 +155,18 @@ function App() {
 						),
 					);
 
-					audioService.current?.announceWorkComplete();
+					// Esperar a que termine el último beep
+					await new Promise((resolve) => setTimeout(resolve, 500));
+
+					// Anunciar finalización del trabajo
+					await audioService.current?.announceWorkComplete();
+
+					// Esperar a que termine el anuncio
+					await new Promise((resolve) => setTimeout(resolve, 1500));
+
+					// Iniciar fase de recuperación y actualizar periodo
 					setIsRecovery(true);
+					setWorkTime(0);
 					setPosition((prev) => ({
 						period: prev.period + 1,
 						lap: 0,
@@ -220,6 +194,187 @@ function App() {
 		isRecovery,
 		position.period,
 	]);
+
+	// Temporizador de recuperación
+	useEffect(() => {
+		const startRecovery = async () => {
+			if (isStartingRef.current) return;
+			isStartingRef.current = true;
+
+			try {
+				// Reiniciar el tiempo de recuperación al valor configurado
+				setCurrentRecoveryTime(config.recoveryTime);
+
+				// Esperar un segundo antes de iniciar los anuncios de audio
+				await new Promise((resolve) => setTimeout(resolve, 1000));
+
+				// Reproducir anuncio de inicio de recuperación
+				await audioService.current?.announceRecoveryStart();
+
+				// Esperar otro segundo antes de iniciar la cuenta regresiva
+				await new Promise((resolve) => setTimeout(resolve, 1000));
+
+				// Iniciar la cuenta regresiva
+				recoveryInterval.current = window.setInterval(() => {
+					setCurrentRecoveryTime((prevTime) => {
+						// Cuando llegue a 15 segundos, reproducir el aviso
+						if (prevTime === 15) {
+							audioService.current?.playFifteenSeconds();
+						}
+
+						if (prevTime <= 0) {
+							if (recoveryInterval.current) {
+								clearInterval(recoveryInterval.current);
+							}
+							return 0;
+						}
+						return prevTime - 1;
+					});
+				}, 1000);
+
+				// Configurar el temporizador para finalizar la recuperación
+				recoveryTimer.current = window.setTimeout(
+					async () => {
+						// Limpiar el intervalo de la cuenta regresiva
+						if (recoveryInterval.current) {
+							clearInterval(recoveryInterval.current);
+						}
+
+						// Esperar a que termine la cuenta regresiva
+						await new Promise((resolve) => setTimeout(resolve, 1000));
+
+						// Anunciar fin de recuperación
+						await audioService.current?.announceRecoveryComplete();
+
+						// Esperar a que termine el anuncio
+						await new Promise((resolve) => setTimeout(resolve, 2000));
+
+						// Preparar para el siguiente periodo
+						setIsRecovery(false);
+						setCurrentRecoveryTime(config.recoveryTime);
+
+						// Esperar antes de iniciar el siguiente periodo
+						await new Promise((resolve) => setTimeout(resolve, 1000));
+
+						// Solo anunciar inicio si no está pausado y sigue corriendo
+						if (config.isRunning && !config.isPaused) {
+							await audioService.current?.announceWorkStart();
+						}
+					},
+					config.recoveryTime * 1000 + 1000,
+				);
+			} finally {
+				isStartingRef.current = false;
+			}
+		};
+
+		// Solo iniciar recuperación si estamos en modo recuperación y el test está corriendo
+		if (isRecovery && config.isRunning && !config.isPaused) {
+			startRecovery();
+		}
+
+		// Limpiar temporizadores al desmontar o cuando cambian las dependencias
+		return () => {
+			if (recoveryTimer.current) {
+				clearTimeout(recoveryTimer.current);
+				recoveryTimer.current = undefined;
+			}
+			if (recoveryInterval.current) {
+				clearInterval(recoveryInterval.current);
+				recoveryInterval.current = undefined;
+			}
+		};
+	}, [isRecovery, config.isRunning, config.isPaused, config.recoveryTime]);
+
+	// Efecto para manejar la pausa durante la recuperación
+	useEffect(() => {
+		// Si está pausado, limpiar todos los temporizadores
+		if (config.isPaused) {
+			if (recoveryTimer.current) {
+				clearTimeout(recoveryTimer.current);
+				recoveryTimer.current = undefined;
+			}
+			if (recoveryInterval.current) {
+				clearInterval(recoveryInterval.current);
+				recoveryInterval.current = undefined;
+			}
+			return;
+		}
+
+		// Solo reanudar si estamos en recuperación y el test está corriendo
+		if (isRecovery && config.isRunning && currentRecoveryTime > 0) {
+			recoveryInterval.current = window.setInterval(() => {
+				setCurrentRecoveryTime((prevTime) => {
+					if (prevTime === 15) {
+						audioService.current?.playFifteenSeconds();
+					}
+
+					if (prevTime <= 0) {
+						if (recoveryInterval.current) {
+							clearInterval(recoveryInterval.current);
+							recoveryInterval.current = undefined;
+						}
+						return 0;
+					}
+					return prevTime - 1;
+				});
+			}, 1000);
+
+			recoveryTimer.current = window.setTimeout(async () => {
+				if (recoveryInterval.current) {
+					clearInterval(recoveryInterval.current);
+					recoveryInterval.current = undefined;
+				}
+
+				await audioService.current?.announceRecoveryComplete();
+				await new Promise((resolve) => setTimeout(resolve, 2000));
+
+				setIsRecovery(false);
+				setCurrentRecoveryTime(config.recoveryTime);
+
+				// Esperar antes de iniciar el siguiente periodo
+				await new Promise((resolve) => setTimeout(resolve, 1000));
+
+				// Solo anunciar inicio si no está pausado y sigue corriendo
+				if (config.isRunning && !config.isPaused) {
+					await audioService.current?.announceWorkStart();
+				}
+			}, currentRecoveryTime * 1000);
+		}
+
+		return () => {
+			if (recoveryTimer.current) {
+				clearTimeout(recoveryTimer.current);
+				recoveryTimer.current = undefined;
+			}
+			if (recoveryInterval.current) {
+				clearInterval(recoveryInterval.current);
+				recoveryInterval.current = undefined;
+			}
+		};
+	}, [
+		config.isPaused,
+		config.isRunning,
+		isRecovery,
+		currentRecoveryTime,
+		config.recoveryTime,
+	]);
+
+	useEffect(() => {
+		if (config.isRunning && !config.isPaused && !config.isFinished) {
+			totalTimeInterval.current = window.setInterval(() => {
+				setTotalTime((t) => t + 0.1);
+			}, 100);
+		} else if (totalTimeInterval.current) {
+			clearInterval(totalTimeInterval.current);
+		}
+
+		return () => {
+			if (totalTimeInterval.current) {
+				clearInterval(totalTimeInterval.current);
+			}
+		};
+	}, [config.isRunning, config.isPaused, config.isFinished]);
 
 	const handleFinish = async () => {
 		setConfig((c) => ({ ...c, isFinished: true, isRunning: false }));
@@ -477,7 +632,7 @@ function App() {
 			<div className="grid gap-8">
 				<Timer
 					workTime={workTime}
-					recoveryTime={recoveryTime}
+					recoveryTime={currentRecoveryTime}
 					totalTime={totalTime}
 				/>
 

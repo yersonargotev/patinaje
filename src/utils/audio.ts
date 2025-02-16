@@ -138,4 +138,9 @@ export class AudioService {
 		await this.stopAll();
 		await this.internalPlaySound("test-paused");
 	}
+
+	public async playFifteenSeconds(): Promise<void> {
+		await this.stopAll();
+		await this.internalPlaySound("fifteen-seconds");
+	}
 }
