@@ -26,7 +26,8 @@ export const getTotalPeriodTime = (period: number): number => {
 export const formatTime = (seconds: number): string => {
 	const mins = Math.floor(seconds / 60);
 	const secs = Math.floor(seconds % 60);
-	return `${mins}:${secs.toString().padStart(2, "0")}`;
+	const ms = Math.floor((seconds % 1) * 100); // Convertir decimales a centésimas
+	return `${mins}:${secs.toString().padStart(2, "0")}.${ms.toString().padStart(2, "0")}`;
 };
 
 export const getDistanceForPeriod = (period: number): number => {

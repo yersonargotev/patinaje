@@ -9,7 +9,7 @@ import { Timer } from "./components/Timer";
 import { Track } from "./components/Track";
 import type { Athlete, TestConfig, TrackPosition } from "./types";
 import { AudioService } from "./utils/audio";
-import { calculateTotalDistance, calculateIntervalTime } from "./utils/timing";
+import { calculateTotalDistance } from "./utils/timing";
 import { getPeriodData } from "./utils/testData";
 import { Toaster, toast } from "sonner";
 
@@ -106,8 +106,8 @@ function App() {
 	useEffect(() => {
 		if (config.isRunning && !config.isPaused && !config.isFinished) {
 			totalTimeInterval.current = window.setInterval(() => {
-				setTotalTime((t) => t + 1);
-			}, 1000);
+				setTotalTime((t) => t + 0.1);
+			}, 100);
 		} else if (totalTimeInterval.current) {
 			clearInterval(totalTimeInterval.current);
 		}
@@ -135,16 +135,14 @@ function App() {
 				audioService.current?.playIntervalBeep();
 			}
 
+			// Usar un intervalo más preciso (100ms) para el tiempo de trabajo
 			workTimer.current = window.setInterval(() => {
 				setWorkTime((t) => {
-					const newTime = t + 1;
+					const newTime = t + 0.1; // Incrementar en décimas de segundo
 					const periodData = getPeriodData(position.period);
 
 					// Play beep at partial time intervals
-					if (
-						periodData &&
-						newTime % Math.floor(periodData.partialTime) === 0
-					) {
+					if (periodData && Math.abs(newTime % periodData.partialTime) < 0.1) {
 						audioService.current?.playIntervalBeep();
 					}
 
@@ -152,7 +150,7 @@ function App() {
 				});
 
 				setPosition((prev) => {
-					const newElapsedTime = prev.elapsedTime + 1;
+					const newElapsedTime = prev.elapsedTime + 0.1;
 					// Calculate new distance for active athletes
 					setAthletes((currentAthletes) =>
 						currentAthletes.map((athlete) =>
@@ -169,43 +167,46 @@ function App() {
 					);
 					return { ...prev, elapsedTime: newElapsedTime };
 				});
-			}, 1000);
+			}, 100); // Actualizar cada 100ms
 
-			const interval = calculateIntervalTime(config.currentPeriod);
-			timer = window.setInterval(() => {
-				setPosition((prev) => {
-					const newSegment = (prev.segment + 1) % 4;
-					const newLap = newSegment === 0 ? (prev.lap + 1) % 4 : prev.lap;
+			const periodData = getPeriodData(config.currentPeriod);
+			if (periodData) {
+				// Usar el lapTime específico del período actual
+				timer = window.setInterval(() => {
+					setPosition((prev) => {
+						const newSegment = (prev.segment + 1) % 4;
+						const newLap = newSegment === 0 ? (prev.lap + 1) % 4 : prev.lap;
 
-					if (newLap === 0 && newSegment === 0) {
-						// Update completed periods for active athletes
-						setAthletes((currentAthletes) =>
-							currentAthletes.map((athlete) =>
-								athlete.active
-									? {
-											...athlete,
-											completedPeriods: [
-												...athlete.completedPeriods,
-												prev.period,
-											],
-										}
-									: athlete,
-							),
-						);
+						if (newLap === 0 && newSegment === 0) {
+							// Update completed periods for active athletes
+							setAthletes((currentAthletes) =>
+								currentAthletes.map((athlete) =>
+									athlete.active
+										? {
+												...athlete,
+												completedPeriods: [
+													...athlete.completedPeriods,
+													prev.period,
+												],
+											}
+										: athlete,
+								),
+							);
 
-						audioService.current?.announceWorkComplete();
-						setIsRecovery(true);
-						return {
-							period: prev.period + 1,
-							lap: 0,
-							segment: 0,
-							elapsedTime: 0, // Reset elapsed time for new period
-						};
-					}
+							audioService.current?.announceWorkComplete();
+							setIsRecovery(true);
+							return {
+								period: prev.period + 1,
+								lap: 0,
+								segment: 0,
+								elapsedTime: 0,
+							};
+						}
 
-					return { ...prev, lap: newLap, segment: newSegment };
-				});
-			}, interval * 1000);
+						return { ...prev, lap: newLap, segment: newSegment };
+					});
+				}, periodData.lapTime * 1000); // Usar el tiempo de vuelta específico del período
+			}
 		}
 
 		return () => {
