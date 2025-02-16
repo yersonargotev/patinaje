@@ -1,16 +1,10 @@
 import { getPeriodData } from "./testData";
 
 export const calculateIntervalTime = (period: number): number => {
-	// Validate period is within bounds
-	if (period < 2 || period > 22) {
-		throw new Error("Period must be between 2 and 22");
-	}
-
 	const periodData = getPeriodData(period);
 	if (!periodData) {
 		throw new Error(`No data found for period ${period}`);
 	}
-
 	return periodData.partialTime;
 };
 
@@ -19,15 +13,14 @@ export const getTotalPeriodTime = (period: number): number => {
 	if (!periodData) {
 		throw new Error(`No data found for period ${period}`);
 	}
-
 	return periodData.totalTime;
 };
 
 export const formatTime = (seconds: number): string => {
 	const mins = Math.floor(seconds / 60);
 	const secs = Math.floor(seconds % 60);
-	const ms = Math.floor((seconds % 1) * 100); // Convertir decimales a centésimas
-	return `${mins}:${secs.toString().padStart(2, "0")}.${ms.toString().padStart(2, "0")}`;
+	const ms = Math.floor((seconds % 1) * 1000);
+	return `${mins}:${secs.toString().padStart(2, "0")}.${ms.toString().padStart(3, "0")}`;
 };
 
 export const getDistanceForPeriod = (period: number): number => {
@@ -35,7 +28,6 @@ export const getDistanceForPeriod = (period: number): number => {
 	if (!periodData) {
 		throw new Error(`No data found for period ${period}`);
 	}
-
 	return periodData.distance;
 };
 
@@ -67,4 +59,22 @@ export const calculateTotalDistance = (
 ): number => {
 	// Only calculate distance from current period
 	return calculateDistance(currentPeriod, elapsedTime);
+};
+
+export const calculateTimeForPeriod = (
+	period: number,
+): {
+	totalTime: number;
+	partialTime: number;
+	lapTime: number;
+} => {
+	const periodData = getPeriodData(period);
+	if (!periodData) {
+		throw new Error(`No data found for period ${period}`);
+	}
+	return {
+		totalTime: periodData.totalTime,
+		partialTime: periodData.partialTime,
+		lapTime: periodData.lapTime,
+	};
 };

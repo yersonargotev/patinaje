@@ -120,38 +120,38 @@ function App() {
 	}, [config.isRunning, config.isPaused, config.isFinished]);
 
 	useEffect(() => {
-		let timer: number;
-
 		if (
 			config.isRunning &&
 			!config.isPaused &&
 			!config.isFinished &&
 			!isRecovery
 		) {
-			// Solo inicializamos workTime si no estamos reanudando
+			const periodData = getPeriodData(position.period);
+			if (!periodData) return;
+
+			// Inicializar workTime si no estamos reanudando
 			if (!config.isPaused) {
 				setWorkTime(0);
-				// Play initial beep at the start of the period
 				audioService.current?.playIntervalBeep();
 			}
 
-			// Usar un intervalo más preciso (100ms) para el tiempo de trabajo
-			workTimer.current = window.setInterval(() => {
-				setWorkTime((t) => {
-					const newTime = t + 0.1; // Incrementar en décimas de segundo
-					const periodData = getPeriodData(position.period);
+			// Usar requestAnimationFrame para una temporización más precisa
+			const startTime = performance.now();
+			let animationFrameId: number;
 
-					// Play beep at partial time intervals
-					if (periodData && Math.abs(newTime % periodData.partialTime) < 0.1) {
-						audioService.current?.playIntervalBeep();
-					}
+			const updateTimer = (currentTime: number) => {
+				const elapsed = (currentTime - startTime) / 1000; // Convertir a segundos
+				setWorkTime(elapsed);
 
-					return newTime;
-				});
+				// Calcular si debemos emitir un beep basado en el tiempo parcial
+				if (Math.floor(elapsed) % Math.floor(periodData.partialTime) === 0) {
+					audioService.current?.playIntervalBeep();
+				}
 
+				// Actualizar posición y distancia
 				setPosition((prev) => {
-					const newElapsedTime = prev.elapsedTime + 0.1;
-					// Calculate new distance for active athletes
+					const newElapsedTime = elapsed;
+					// Calcular nueva distancia para atletas activos
 					setAthletes((currentAthletes) =>
 						currentAthletes.map((athlete) =>
 							athlete.active
@@ -167,57 +167,50 @@ function App() {
 					);
 					return { ...prev, elapsedTime: newElapsedTime };
 				});
-			}, 100); // Actualizar cada 100ms
 
-			const periodData = getPeriodData(config.currentPeriod);
-			if (periodData) {
-				// Usar el lapTime específico del período actual
-				timer = window.setInterval(() => {
-					setPosition((prev) => {
-						const newSegment = (prev.segment + 1) % 4;
-						const newLap = newSegment === 0 ? (prev.lap + 1) % 4 : prev.lap;
+				// Verificar si hemos alcanzado el tiempo total del periodo
+				if (elapsed >= periodData.totalTime) {
+					// Actualizar completed periods para atletas activos
+					setAthletes((currentAthletes) =>
+						currentAthletes.map((athlete) =>
+							athlete.active
+								? {
+										...athlete,
+										completedPeriods: [
+											...athlete.completedPeriods,
+											position.period,
+										],
+									}
+								: athlete,
+						),
+					);
 
-						if (newLap === 0 && newSegment === 0) {
-							// Update completed periods for active athletes
-							setAthletes((currentAthletes) =>
-								currentAthletes.map((athlete) =>
-									athlete.active
-										? {
-												...athlete,
-												completedPeriods: [
-													...athlete.completedPeriods,
-													prev.period,
-												],
-											}
-										: athlete,
-								),
-							);
+					audioService.current?.announceWorkComplete();
+					setIsRecovery(true);
+					setPosition((prev) => ({
+						period: prev.period + 1,
+						lap: 0,
+						segment: 0,
+						elapsedTime: 0,
+					}));
+					return;
+				}
 
-							audioService.current?.announceWorkComplete();
-							setIsRecovery(true);
-							return {
-								period: prev.period + 1,
-								lap: 0,
-								segment: 0,
-								elapsedTime: 0,
-							};
-						}
+				animationFrameId = requestAnimationFrame(updateTimer);
+			};
 
-						return { ...prev, lap: newLap, segment: newSegment };
-					});
-				}, periodData.lapTime * 1000); // Usar el tiempo de vuelta específico del período
-			}
+			animationFrameId = requestAnimationFrame(updateTimer);
+
+			return () => {
+				if (animationFrameId) {
+					cancelAnimationFrame(animationFrameId);
+				}
+			};
 		}
-
-		return () => {
-			if (timer) clearInterval(timer);
-			if (workTimer.current) clearInterval(workTimer.current);
-		};
 	}, [
 		config.isRunning,
 		config.isPaused,
 		config.isFinished,
-		config.currentPeriod,
 		isRecovery,
 		position.period,
 	]);
