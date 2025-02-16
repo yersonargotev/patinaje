@@ -132,11 +132,12 @@ function App() {
 			// Inicializar workTime si no estamos reanudando
 			if (!config.isPaused) {
 				setWorkTime(0);
+				// Play initial beep at the start of the period
 				audioService.current?.playIntervalBeep();
 			}
 
-			// Usar requestAnimationFrame para una temporización más precisa
 			const startTime = performance.now();
+			let lastBeepTime = 0;
 			let animationFrameId: number;
 
 			const updateTimer = (currentTime: number) => {
@@ -144,8 +145,13 @@ function App() {
 				setWorkTime(elapsed);
 
 				// Calcular si debemos emitir un beep basado en el tiempo parcial
-				if (Math.floor(elapsed) % Math.floor(periodData.partialTime) === 0) {
+				const currentInterval = Math.floor(elapsed / periodData.partialTime);
+				const shouldBeep =
+					currentInterval > Math.floor(lastBeepTime / periodData.partialTime);
+
+				if (shouldBeep && elapsed >= periodData.partialTime) {
 					audioService.current?.playIntervalBeep();
+					lastBeepTime = elapsed;
 				}
 
 				// Actualizar posición y distancia
