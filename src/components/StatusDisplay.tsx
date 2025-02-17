@@ -3,18 +3,23 @@ import { getPeriodData } from "../utils/testData";
 
 interface StatusDisplayProps {
 	period: number;
-	lap: number;
+	segment: number;
 	recoveryTime: number;
 	activeAthletes: number;
+	totalDistance: number;
 }
 
 export const StatusDisplay: React.FC<StatusDisplayProps> = ({
 	period,
-	lap,
+	segment,
 	recoveryTime,
 	activeAthletes,
+	totalDistance,
 }) => {
 	const periodData = getPeriodData(period);
+
+	// Calculamos la distancia del segmento actual (0-150m)
+	const segmentDistance = segment * 50;
 
 	return (
 		<div className="grid grid-cols-4 gap-4 mb-4">
@@ -27,10 +32,10 @@ export const StatusDisplay: React.FC<StatusDisplayProps> = ({
 			</div>
 
 			<div className="bg-white p-4 rounded-lg shadow-md">
-				<h3 className="text-sm font-medium text-gray-500">Vuelta</h3>
-				<p className="text-2xl font-bold">{lap}/4</p>
+				<h3 className="text-sm font-medium text-gray-500">Distancia Total</h3>
+				<p className="text-2xl font-bold">{totalDistance}m</p>
 				<p className="text-sm text-gray-600">
-					Distancia: {periodData?.distance} m
+					Segmento actual: {segmentDistance}m
 				</p>
 			</div>
 

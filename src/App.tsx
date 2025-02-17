@@ -9,7 +9,6 @@ import { Timer } from "./components/Timer";
 import { Track } from "./components/Track";
 import type { Athlete, TestConfig, TrackPosition } from "./types";
 import { AudioService } from "./utils/audio";
-import { calculateTotalDistance } from "./utils/timing";
 import { getPeriodData } from "./utils/testData";
 import { Toaster, toast } from "sonner";
 
@@ -104,38 +103,45 @@ function App() {
 
 			const updateTimer = () => {
 				const now = Date.now();
-				const elapsed = Math.floor((now - startTime) / 1000); // Redondear a segundos enteros
+				const elapsed = Math.floor((now - startTime) / 1000);
 				setWorkTime(elapsed);
 
-				// Calcular si debemos emitir un beep basado en el tiempo parcial
+				// Calcular el segmento actual basado en el tiempo transcurrido
 				const currentInterval = Math.floor(elapsed / periodData.partialTime);
+				const currentSegment = currentInterval % 4; // 0-3 para los 4 segmentos por vuelta
+				const currentLap = Math.floor(currentInterval / 4); // Vuelta actual
+
+				// Calcular si debemos emitir un beep
 				const shouldBeep =
 					currentInterval > Math.floor(lastBeepTime / periodData.partialTime);
 
 				if (shouldBeep && elapsed >= periodData.partialTime) {
 					audioService.current?.playIntervalBeep();
 					lastBeepTime = elapsed;
+
+					// Actualizar la distancia para atletas activos
+					setAthletes((currentAthletes) =>
+						currentAthletes.map((athlete) => {
+							if (athlete.active) {
+								// Añadir 50m por cada segmento completado
+								const newDistance = athlete.totalDistance + 50;
+								return {
+									...athlete,
+									totalDistance: newDistance,
+								};
+							}
+							return athlete;
+						}),
+					);
 				}
 
-				// Actualizar posición y distancia
-				setPosition((prev) => {
-					const newElapsedTime = elapsed;
-					// Calcular nueva distancia para atletas activos
-					setAthletes((currentAthletes) =>
-						currentAthletes.map((athlete) =>
-							athlete.active
-								? {
-										...athlete,
-										totalDistance: calculateTotalDistance(
-											position.period,
-											newElapsedTime,
-										),
-									}
-								: athlete,
-						),
-					);
-					return { ...prev, elapsedTime: newElapsedTime };
-				});
+				// Actualizar posición
+				setPosition((prev) => ({
+					...prev,
+					elapsedTime: elapsed,
+					segment: currentSegment,
+					lap: currentLap,
+				}));
 
 				// Verificar si hemos alcanzado el tiempo total del periodo
 				if (elapsed >= periodData.totalTime) {
@@ -157,16 +163,9 @@ function App() {
 					);
 
 					const finishPeriod = async () => {
-						// Esperar a que termine el último beep
 						await new Promise((resolve) => setTimeout(resolve, 500));
-
-						// Anunciar finalización del trabajo
 						await audioService.current?.announceWorkComplete();
-
-						// Esperar a que termine el anuncio
 						await new Promise((resolve) => setTimeout(resolve, 1500));
-
-						// Iniciar fase de recuperación y actualizar periodo
 						setIsRecovery(true);
 						setWorkTime(0);
 						setPosition((prev) => ({
@@ -561,9 +560,10 @@ function App() {
 
 				<StatusDisplay
 					period={position.period}
-					lap={position.lap}
+					segment={position.segment}
 					recoveryTime={config.recoveryTime}
 					activeAthletes={athletes.filter((a) => a.active).length}
+					totalDistance={athletes[0]?.totalDistance || 0} // Usamos la distancia total del primer atleta
 				/>
 
 				<Track position={position} currentPeriod={config.currentPeriod} />
