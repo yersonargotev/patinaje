@@ -1,42 +1,112 @@
-import { TrackPosition } from "../types";
+import type { TrackPosition } from "../types";
 
 interface TrackProps {
 	position: TrackPosition;
-	athletes: number;
 }
 
-export const Track: React.FC<TrackProps> = ({ position, athletes }) => {
-	const segments = Array(8).fill(0); // 8 segments per lap (50m each)
+interface LightIndicatorProps {
+	active: boolean;
+	top: string;
+	left: string;
+}
+
+const LightIndicator: React.FC<LightIndicatorProps> = ({
+	active,
+	top,
+	left,
+}) => (
+	<div
+		className={`absolute w-3 h-3 transition-all duration-300 transform ${
+			active
+				? "bg-yellow-400 scale-125 shadow-[0_0_15px_#FDE047] z-20"
+				: "bg-white/50 scale-100"
+		}`}
+		style={{
+			top,
+			left,
+			borderRadius: "50%",
+			boxShadow: active ? "0 0 10px rgba(250, 204, 21, 0.7)" : "none",
+		}}
+	/>
+);
+
+export const Track: React.FC<TrackProps> = ({ position }) => {
+	const segments = Array(4).fill(0); // 4 segments per lap (50m each)
+
+	// Calculate positions for a segment in the oval track
+	const getSegmentPosition = (segmentIdx: number, lapIdx: number) => {
+		const trackWidth = 90; // Width percentage of the track
+		const trackHeight = 90; // Height percentage of the track
+		const centerX = 50; // Center X percentage
+		const centerY = 50; // Center Y percentage
+		const angle = -(segmentIdx / 4) * Math.PI * 2 - Math.PI / 2; // Start from top, negative for counterclockwise
+
+		// Adjust radius based on lap (outer to inner)
+		const radiusX = trackWidth / 2 - lapIdx * 5; // Decrease radius for inner laps
+		const radiusY = trackHeight / 2 - lapIdx * 5;
+
+		const x = centerX + radiusX * Math.cos(angle);
+		const y = centerY + radiusY * Math.sin(angle);
+
+		return { x, y };
+	};
 
 	return (
 		<div className="w-full max-w-4xl mx-auto p-4">
-			<div className="relative aspect-[2/1] bg-green-100 rounded-[200px] border-2 border-white overflow-hidden">
-				{/* Track lanes */}
-				{Array(9)
-					.fill(0)
-					.map((_, idx) => (
-						<div
-							key={idx}
-							className="absolute w-[98%] h-[10%] border border-white rounded-[200px]"
-							style={{
-								top: `${idx * 11}%`,
-								left: "1%",
-							}}
-						/>
-					))}
+			<div className="relative aspect-[2/1] rounded-[200px] overflow-hidden shadow-lg">
+				{/* Background grass texture */}
+				<div className="absolute inset-0 bg-green-700 bg-opacity-80">
+					<div className="absolute inset-0 bg-[radial-gradient(#22c55e_1px,transparent_1px)] [background-size:16px_16px] opacity-30" />
+				</div>
 
-				{/* Position markers */}
-				{segments.map((_, idx) => (
+				{/* Red outer track */}
+				<div className="absolute inset-[5%] bg-red-600 rounded-[200px]" />
+
+				{/* Blue middle track */}
+				<div className="absolute inset-[15%] bg-sky-500 rounded-[200px]" />
+
+				{/* Green inner track */}
+				<div className="absolute inset-[25%] bg-green-500 rounded-[200px]">
+					<div className="absolute inset-0 bg-[radial-gradient(#22c55e_1px,transparent_1px)] [background-size:8px_8px] opacity-20" />
+				</div>
+
+				{/* Light indicators for each segment */}
+				{segments.map((_, segmentIdx) =>
+					Array(4)
+						.fill(0)
+						.map((_, lapIdx) => {
+							const segmentNumber = lapIdx * 4 + segmentIdx;
+							const uniqueKey = `light-${segmentNumber}-${lapIdx}-${segmentIdx}`;
+							const pos = getSegmentPosition(segmentIdx, lapIdx);
+							return (
+								<LightIndicator
+									key={uniqueKey}
+									active={position.expectedSegment === segmentNumber}
+									top={`${pos.y}%`}
+									left={`${pos.x}%`}
+								/>
+							);
+						}),
+				)}
+
+				{/* Current position marker */}
+				{position.segment >= 0 && (
 					<div
-						key={idx}
-						className="absolute w-2 h-2 bg-yellow-400 rounded-full"
+						className="absolute transition-all duration-500 ease-in-out z-30"
 						style={{
-							top: `${position.segment === idx ? position.lap * 11 : 0}%`,
-							left: `${idx * 12.5}%`,
-							display: position.segment === idx ? "block" : "none",
+							...getSegmentPosition(position.segment, position.lap),
+							transform: "translate(-50%, -50%)",
 						}}
-					/>
-				))}
+					>
+						<div className="relative">
+							<div className="absolute w-6 h-6 bg-white rounded-full animate-ping" />
+							<div className="absolute w-5 h-5 bg-yellow-400 rounded-full animate-pulse" />
+							<div className="relative w-4 h-4 bg-yellow-400 rounded-full shadow-lg">
+								<div className="absolute inset-0 bg-white/50 rounded-full animate-pulse" />
+							</div>
+						</div>
+					</div>
+				)}
 			</div>
 		</div>
 	);
