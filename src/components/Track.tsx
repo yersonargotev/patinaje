@@ -1,9 +1,7 @@
-import { TrackPosition } from "../types";
-import { getPeriodData } from "../utils/testData";
+import type { TrackPosition } from "../types";
 
 interface TrackProps {
 	position: TrackPosition;
-	currentPeriod: number;
 }
 
 interface LightIndicatorProps {
@@ -32,20 +30,8 @@ const LightIndicator: React.FC<LightIndicatorProps> = ({
 	/>
 );
 
-export const Track: React.FC<TrackProps> = ({ position, currentPeriod }) => {
+export const Track: React.FC<TrackProps> = ({ position }) => {
 	const segments = Array(4).fill(0); // 4 segments per lap (50m each)
-	const periodData = getPeriodData(currentPeriod);
-
-	// Calculate expected segment based on current period timing
-	const getExpectedSegment = () => {
-		if (!periodData) return null;
-		const totalSegments = 16; // 4 laps * 4 segments
-		const currentSegment =
-			Math.floor(position.elapsedTime / periodData.partialTime) % totalSegments;
-		return currentSegment;
-	};
-
-	const expectedSegment = getExpectedSegment();
 
 	// Calculate positions for a segment in the oval track
 	const getSegmentPosition = (segmentIdx: number, lapIdx: number) => {
@@ -95,7 +81,7 @@ export const Track: React.FC<TrackProps> = ({ position, currentPeriod }) => {
 							return (
 								<LightIndicator
 									key={uniqueKey}
-									active={expectedSegment === segmentNumber}
+									active={position.expectedSegment === segmentNumber}
 									top={`${pos.y}%`}
 									left={`${pos.x}%`}
 								/>

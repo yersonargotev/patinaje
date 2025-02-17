@@ -28,6 +28,7 @@ function App() {
 		lap: 0,
 		segment: 0,
 		elapsedTime: 0,
+		expectedSegment: 0,
 	});
 
 	const [athletes, setAthletes] = useState<Athlete[]>([
@@ -141,6 +142,7 @@ function App() {
 					elapsedTime: elapsed,
 					segment: currentSegment,
 					lap: currentLap,
+					expectedSegment: currentInterval % 16,
 				}));
 
 				// Verificar si hemos alcanzado el tiempo total del periodo
@@ -173,6 +175,7 @@ function App() {
 							lap: 0,
 							segment: 0,
 							elapsedTime: 0,
+							expectedSegment: 0,
 						}));
 					};
 
@@ -506,6 +509,7 @@ function App() {
 			lap: 0,
 			segment: 0,
 			elapsedTime: 0,
+			expectedSegment: 0,
 		});
 
 		// Reset athletes to initial state
@@ -566,7 +570,7 @@ function App() {
 					totalDistance={athletes[0]?.totalDistance || 0} // Usamos la distancia total del primer atleta
 				/>
 
-				<Track position={position} currentPeriod={config.currentPeriod} />
+				<Track position={position} />
 
 				<ControlPanel
 					config={config}

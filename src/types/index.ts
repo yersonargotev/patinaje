@@ -24,4 +24,5 @@ export interface TrackPosition {
 	lap: number;
 	segment: number;
 	elapsedTime: number;
+	expectedSegment: number;
 }
