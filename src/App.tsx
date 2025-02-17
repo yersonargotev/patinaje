@@ -48,6 +48,7 @@ function App() {
 	const [workTime, setWorkTime] = useState(0);
 	const [currentRecoveryTime, setCurrentRecoveryTime] = useState(0);
 	const [totalTime, setTotalTime] = useState(0);
+	const [previousTotalTime, setPreviousTotalTime] = useState(0);
 	const [prepCountdown, setPrepCountdown] = useState<number | null>(null);
 
 	const audioService = useRef<AudioService>(new AudioService());
@@ -91,28 +92,24 @@ function App() {
 			const periodData = getPeriodData(position.period);
 			if (!periodData) return;
 
-			// Inicializar workTime
 			if (!config.isPaused) {
 				setWorkTime(0);
-				// Reproducir beep inicial al comenzar el periodo
 				audioService.current?.playIntervalBeep();
 			}
 
-			const startTime = Date.now();
+			const startTime = performance.now();
 			let lastBeepTime = 0;
 			let animationFrameId: number;
 
 			const updateTimer = () => {
-				const now = Date.now();
-				const elapsed = Math.floor((now - startTime) / 1000);
+				const now = performance.now();
+				const elapsed = (now - startTime) / 1000; // Convert to seconds with millisecond precision
 				setWorkTime(elapsed);
 
-				// Calcular el segmento actual basado en el tiempo transcurrido
 				const currentInterval = Math.floor(elapsed / periodData.partialTime);
-				const currentSegment = currentInterval % 4; // 0-3 para los 4 segmentos por vuelta
-				const currentLap = Math.floor(currentInterval / 4); // Vuelta actual
+				const currentSegment = currentInterval % 4;
+				const currentLap = Math.floor(currentInterval / 4);
 
-				// Calcular si debemos emitir un beep
 				const shouldBeep =
 					currentInterval > Math.floor(lastBeepTime / periodData.partialTime);
 
@@ -120,11 +117,9 @@ function App() {
 					audioService.current?.playIntervalBeep();
 					lastBeepTime = elapsed;
 
-					// Actualizar la distancia para atletas activos
 					setAthletes((currentAthletes) =>
 						currentAthletes.map((athlete) => {
 							if (athlete.active) {
-								// Añadir 50m por cada segmento completado
 								const newDistance = athlete.totalDistance + 50;
 								return {
 									...athlete,
@@ -136,7 +131,6 @@ function App() {
 					);
 				}
 
-				// Actualizar posición
 				setPosition((prev) => ({
 					...prev,
 					elapsedTime: elapsed,
@@ -145,11 +139,9 @@ function App() {
 					expectedSegment: currentInterval % 16,
 				}));
 
-				// Verificar si hemos alcanzado el tiempo total del periodo
 				if (elapsed >= periodData.totalTime) {
 					cancelAnimationFrame(animationFrameId);
 
-					// Actualizar completed periods para atletas activos
 					setAthletes((currentAthletes) =>
 						currentAthletes.map((athlete) =>
 							athlete.active
@@ -300,19 +292,24 @@ function App() {
 
 	useEffect(() => {
 		if (config.isRunning && !config.isPaused && !config.isFinished) {
-			totalTimeInterval.current = window.setInterval(() => {
-				setTotalTime((t) => t + 1);
-			}, 1000);
-		} else if (totalTimeInterval.current) {
-			clearInterval(totalTimeInterval.current);
-		}
+			const startTime = performance.now();
+			let animationFrameId: number;
 
-		return () => {
-			if (totalTimeInterval.current) {
-				clearInterval(totalTimeInterval.current);
-			}
-		};
-	}, [config.isRunning, config.isPaused, config.isFinished]);
+			const updateTotalTime = () => {
+				const now = performance.now();
+				setTotalTime((now - startTime) / 1000 + previousTotalTime);
+				animationFrameId = requestAnimationFrame(updateTotalTime);
+			};
+
+			animationFrameId = requestAnimationFrame(updateTotalTime);
+
+			return () => {
+				if (animationFrameId) {
+					cancelAnimationFrame(animationFrameId);
+				}
+			};
+		}
+	}, [config.isRunning, config.isPaused, config.isFinished, previousTotalTime]);
 
 	const handleFinish = async () => {
 		setConfig((c) => ({ ...c, isFinished: true, isRunning: false }));
@@ -348,15 +345,19 @@ function App() {
 					.filter((a) => a.active)
 					.map(async (athlete) => {
 						try {
+							// Redondear totalTime a un número entero
+							const roundedTotalTime = Math.floor(totalTime);
+
 							await invoke("save_evaluation_data", {
 								athlete: {
 									name: athlete.name,
 									age: athlete.age,
 									weight: athlete.weight,
 									height: athlete.height,
+									observations: athlete.observations || "",
 								},
 								completedPeriods: JSON.stringify(athlete.completedPeriods),
-								totalTime,
+								totalTime: roundedTotalTime,
 								totalDistance: athlete.totalDistance,
 								status: "completed",
 							});
@@ -390,6 +391,9 @@ function App() {
 		if (!athlete) return;
 
 		try {
+			// Redondear totalTime a un número entero
+			const roundedTotalTime = Math.floor(totalTime);
+
 			// Save the evaluation data for the finished athlete
 			await invoke("save_evaluation_data", {
 				athlete: {
@@ -397,9 +401,10 @@ function App() {
 					age: athlete.age,
 					weight: athlete.weight,
 					height: athlete.height,
+					observations: athlete.observations || "",
 				},
 				completedPeriods: JSON.stringify(athlete.completedPeriods),
-				totalTime,
+				totalTime: roundedTotalTime,
 				totalDistance: athlete.totalDistance,
 				status: "completed",
 			});
@@ -483,6 +488,7 @@ function App() {
 
 	const handlePause = () => {
 		setConfig((c) => ({ ...c, isRunning: false, isPaused: true }));
+		setPreviousTotalTime(totalTime);
 		audioService.current?.announceTestPaused();
 	};
 
