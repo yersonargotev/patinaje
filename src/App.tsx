@@ -247,23 +247,8 @@ function App() {
 				// Anunciar fin de recuperación
 				await audioService.current?.announceRecoveryComplete();
 
-				// Esperar 2 segundos
-				await new Promise((resolve) => setTimeout(resolve, 2000));
-
-				// Iniciar cuenta regresiva para el siguiente periodo
-				setPrepCountdown(5);
-
-				// Cuenta regresiva visual
-				for (let i = 5; i > 0; i--) {
-					await new Promise((resolve) => setTimeout(resolve, 1000));
-					setPrepCountdown(i - 1);
-				}
-
-				// Limpiar countdown y preparar siguiente periodo
-				setPrepCountdown(null);
-
 				// Anunciar inicio del siguiente periodo
-				await audioService.current?.announceWorkStart();
+				await audioService.current?.announceWorkStartPeriod(position.period);
 
 				// Transición al siguiente periodo
 				setIsRecovery(false);
@@ -288,7 +273,13 @@ function App() {
 				cancelAnimationFrame(animationFrameId);
 			}
 		};
-	}, [isRecovery, config.isRunning, config.isPaused, config.recoveryTime]);
+	}, [
+		isRecovery,
+		config.isRunning,
+		config.isPaused,
+		config.recoveryTime,
+		position.period,
+	]);
 
 	useEffect(() => {
 		if (config.isRunning && !config.isPaused && !config.isFinished) {
@@ -431,7 +422,7 @@ function App() {
 		}
 	};
 
-	const handleStart = async () => {
+	const handleStart = async (period: number) => {
 		if (isStartingRef.current) return;
 
 		// Verificar datos de atletas
@@ -472,7 +463,7 @@ function App() {
 					}
 
 					setPrepCountdown(null);
-					await audioService.current?.announceWorkStart();
+					await audioService.current?.announceWorkStartPeriod(period);
 					await new Promise((resolve) => setTimeout(resolve, 2000));
 				}
 
@@ -580,7 +571,7 @@ function App() {
 
 				<ControlPanel
 					config={config}
-					onStart={handleStart}
+					onStart={() => handleStart(position.period)}
 					onPause={handlePause}
 					onReset={handleReset}
 					onPeriodChange={(period) => {

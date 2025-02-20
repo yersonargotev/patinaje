@@ -27,6 +27,28 @@ export class AudioService {
 			"fifteen-seconds",
 			"ten-seconds",
 			"countdown",
+			"1",
+			"2",
+			"3",
+			"4",
+			"5",
+			"6",
+			"7",
+			"8",
+			"9",
+			"10",
+			"11",
+			"12",
+			"13",
+			"14",
+			"15",
+			"16",
+			"17",
+			"18",
+			"19",
+			"20",
+			"21",
+			"22",
 		];
 
 		if (this.isTauri) {
@@ -94,9 +116,22 @@ export class AudioService {
 		await this.internalPlaySound("work-start");
 	}
 
+	public async announceWorkStartPeriod(period: number): Promise<void> {
+		await this.stopAll();
+		await this.internalPlaySound("work-start");
+		await new Promise((resolve) => setTimeout(resolve, 2000));
+		await this.internalPlaySound(period.toString());
+	}
+
 	public async announceWorkComplete(): Promise<void> {
 		await this.stopAll();
 		await this.internalPlaySound("work-complete");
+	}
+
+	public async playCountdownRecovery(): Promise<void> {
+		await this.stopAll();
+		// Play "10 seconds" announcement
+		await this.internalPlaySound("ten-seconds");
 	}
 
 	public async announceRecoveryStart(): Promise<void> {
