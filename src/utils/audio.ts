@@ -121,6 +121,7 @@ export class AudioService {
 		await this.internalPlaySound("work-start");
 		await new Promise((resolve) => setTimeout(resolve, 2000));
 		await this.internalPlaySound(period.toString());
+		await new Promise((resolve) => setTimeout(resolve, 1000));
 	}
 
 	public async announceWorkComplete(): Promise<void> {

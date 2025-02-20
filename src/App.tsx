@@ -159,7 +159,7 @@ function App() {
 					const finishPeriod = async () => {
 						await new Promise((resolve) => setTimeout(resolve, 500));
 						await audioService.current?.announceWorkComplete();
-						await new Promise((resolve) => setTimeout(resolve, 2000));
+						await new Promise((resolve) => setTimeout(resolve, 2500));
 						setIsRecovery(true);
 						setWorkTime(0);
 						setPosition((prev) => ({
@@ -202,6 +202,7 @@ function App() {
 		const startTime = Date.now();
 		const endTime = startTime + config.recoveryTime * 1000;
 		let lastUpdateTime = Math.floor(config.recoveryTime);
+		let hasPlayedCountdown = false;
 
 		const startRecovery = async () => {
 			// Reiniciar el tiempo de recuperación
@@ -221,8 +222,9 @@ function App() {
 					setCurrentRecoveryTime(remaining);
 
 					// Anuncios de tiempo
-					if (remaining === 15) {
-						audioService.current?.playFifteenSeconds();
+					if (remaining === 10 && !hasPlayedCountdown) {
+						hasPlayedCountdown = true;
+						audioService.current?.playCountdownRecovery();
 					}
 				}
 
