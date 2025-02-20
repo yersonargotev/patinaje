@@ -159,7 +159,7 @@ function App() {
 					const finishPeriod = async () => {
 						await new Promise((resolve) => setTimeout(resolve, 500));
 						await audioService.current?.announceWorkComplete();
-						await new Promise((resolve) => setTimeout(resolve, 1500));
+						await new Promise((resolve) => setTimeout(resolve, 2000));
 						setIsRecovery(true);
 						setWorkTime(0);
 						setPosition((prev) => ({
@@ -324,9 +324,7 @@ function App() {
 				);
 
 			if (invalidAthletes.length > 0) {
-				toast.error(
-					"Por favor complete todos los datos requeridos de los deportistas activos antes de finalizar.",
-				);
+				toast.error("Los datos de los deportistas activos no están completos.");
 				return;
 			}
 
