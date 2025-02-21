@@ -11,6 +11,7 @@ import type { Athlete, TestConfig, TrackPosition } from "./types";
 import { AudioService } from "./utils/audio";
 import { getPeriodData } from "./utils/testData";
 import { Toaster, toast } from "sonner";
+import { TimerService } from "./services/TimerService";
 
 function App() {
 	const [config, setConfig] = useState<TestConfig>({
@@ -48,22 +49,18 @@ function App() {
 	const [workTime, setWorkTime] = useState(0);
 	const [currentRecoveryTime, setCurrentRecoveryTime] = useState(0);
 	const [totalTime, setTotalTime] = useState(0);
-	const [previousTotalTime, setPreviousTotalTime] = useState(0);
 	const [prepCountdown, setPrepCountdown] = useState<number | null>(null);
 
 	const audioService = useRef<AudioService>(new AudioService());
-	const workTimer = useRef<number>();
-	const recoveryTimer = useRef<number>();
-	const recoveryInterval = useRef<number>();
-	const totalTimeInterval = useRef<number>();
+	const timerService = useRef<TimerService>();
 	const isStartingRef = useRef(false);
 
 	// Limpiar temporizadores al desmontar
 	useEffect(() => {
 		return () => {
-			if (totalTimeInterval.current) clearInterval(totalTimeInterval.current);
-			if (recoveryTimer.current) clearTimeout(recoveryTimer.current);
-			if (recoveryInterval.current) clearInterval(recoveryInterval.current);
+			if (timerService.current) {
+				timerService.current.cleanup();
+			}
 		};
 	}, []);
 
@@ -72,13 +69,10 @@ function App() {
 			console.error("Error loading audio files:", error);
 		});
 
+		timerService.current = new TimerService();
+
 		return () => {
-			if (totalTimeInterval.current) {
-				clearInterval(totalTimeInterval.current);
-			}
-			if (recoveryTimer.current) {
-				clearTimeout(recoveryTimer.current);
-			}
+			timerService.current?.cleanup();
 		};
 	}, []);
 
@@ -291,7 +285,7 @@ function App() {
 
 			const updateTotalTime = () => {
 				const now = performance.now();
-				setTotalTime((now - startTime) / 1000 + previousTotalTime);
+				setTotalTime((now - startTime) / 1000);
 				animationFrameId = requestAnimationFrame(updateTotalTime);
 			};
 
@@ -303,7 +297,7 @@ function App() {
 				}
 			};
 		}
-	}, [config.isRunning, config.isPaused, config.isFinished, previousTotalTime]);
+	}, [config.isRunning, config.isPaused, config.isFinished]);
 
 	const handleFinish = async () => {
 		setConfig((c) => ({ ...c, isFinished: true, isRunning: false }));
@@ -423,7 +417,7 @@ function App() {
 		}
 	};
 
-	const handleStart = async (period: number) => {
+	const handleStart = async () => {
 		if (isStartingRef.current) return;
 
 		// Verificar datos de atletas
@@ -448,8 +442,8 @@ function App() {
 
 		try {
 			if (config.isPaused) {
-				// Simplemente reanudar sin anuncios adicionales
 				setConfig((c) => ({ ...c, isRunning: true, isPaused: false }));
+				timerService.current?.start();
 			} else {
 				// Inicio nuevo
 				if (!isRecovery) {
@@ -464,11 +458,12 @@ function App() {
 					}
 
 					setPrepCountdown(null);
-					await audioService.current?.announceWorkStartPeriod(period);
+					await audioService.current?.announceWorkStartPeriod(position.period);
 					// await new Promise((resolve) => setTimeout(resolve, 2700));
 				}
 
 				setConfig((c) => ({ ...c, isRunning: true, isPaused: false }));
+				timerService.current?.start();
 			}
 		} catch (error) {
 			console.error("Error al iniciar la prueba:", error);
@@ -480,7 +475,7 @@ function App() {
 
 	const handlePause = () => {
 		setConfig((c) => ({ ...c, isRunning: false, isPaused: true }));
-		setPreviousTotalTime(totalTime);
+		timerService.current?.pause();
 		audioService.current?.announceTestPaused();
 	};
 
@@ -491,6 +486,7 @@ function App() {
 	};
 
 	const handleReset = () => {
+		timerService.current?.reset();
 		// Reset config to initial state
 		setConfig({
 			recoveryTime: 45,
@@ -530,11 +526,6 @@ function App() {
 		setTotalTime(0);
 		setPrepCountdown(null);
 
-		// Clear any running intervals/timeouts
-		if (workTimer.current) clearInterval(workTimer.current);
-		if (recoveryTimer.current) clearTimeout(recoveryTimer.current);
-		if (totalTimeInterval.current) clearInterval(totalTimeInterval.current);
-
 		toast.success("Test reiniciado correctamente");
 	};
 
@@ -572,7 +563,7 @@ function App() {
 
 				<ControlPanel
 					config={config}
-					onStart={() => handleStart(position.period)}
+					onStart={handleStart}
 					onPause={handlePause}
 					onReset={handleReset}
 					onPeriodChange={(period) => {
