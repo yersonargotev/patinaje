@@ -18,8 +18,9 @@ export const StatusDisplay: React.FC<StatusDisplayProps> = ({
 }) => {
 	const periodData = getPeriodData(period);
 
-	// Calculamos la distancia del segmento actual (0-150m)
 	const segmentDistance = segment * 50;
+
+	const currentLap = Math.floor((totalDistance % 800) / 200);
 
 	return (
 		<div className="grid grid-cols-4 gap-4 mb-4">
@@ -37,6 +38,7 @@ export const StatusDisplay: React.FC<StatusDisplayProps> = ({
 				<p className="text-sm text-gray-600">
 					Segmento actual: {segmentDistance}m
 				</p>
+				<p className="text-sm text-gray-600">Vuelta: {currentLap}</p>
 			</div>
 
 			<div className="bg-white p-4 rounded-lg shadow-md">
