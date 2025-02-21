@@ -157,9 +157,9 @@ function App() {
 					);
 
 					const finishPeriod = async () => {
-						await new Promise((resolve) => setTimeout(resolve, 500));
+						await new Promise((resolve) => setTimeout(resolve, 1000));
 						await audioService.current?.announceWorkComplete();
-						await new Promise((resolve) => setTimeout(resolve, 2500));
+						await new Promise((resolve) => setTimeout(resolve, 1500));
 						setIsRecovery(true);
 						setWorkTime(0);
 						setPosition((prev) => ({
@@ -248,6 +248,7 @@ function App() {
 			try {
 				// Anunciar fin de recuperación
 				await audioService.current?.announceRecoveryComplete();
+				await new Promise((resolve) => setTimeout(resolve, 2000));
 
 				// Anunciar inicio del siguiente periodo
 				await audioService.current?.announceWorkStartPeriod(position.period);
@@ -464,7 +465,7 @@ function App() {
 
 					setPrepCountdown(null);
 					await audioService.current?.announceWorkStartPeriod(period);
-					await new Promise((resolve) => setTimeout(resolve, 2000));
+					// await new Promise((resolve) => setTimeout(resolve, 2700));
 				}
 
 				setConfig((c) => ({ ...c, isRunning: true, isPaused: false }));
