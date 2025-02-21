@@ -6,6 +6,13 @@ use serde::{Deserialize, Serialize};
 use std::path::Path;
 use std::sync::Mutex;
 
+fn format_seconds_to_time(seconds: i32) -> String {
+    let hours = seconds / 3600;
+    let minutes = (seconds % 3600) / 60;
+    let secs = seconds % 60;
+    format!("{:02}:{:02}:{:02}", hours, minutes, secs)
+}
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Athlete {
     pub id: Option<i64>,
@@ -242,7 +249,7 @@ impl Database {
             "Atleta ID",
             "Nombre del Atleta",
             "Periodos Completados",
-            "Tiempo Total (s)",
+            "Tiempo Total",
             "Fecha",
             "Estado",
             "Observaciones",
@@ -270,7 +277,7 @@ impl Database {
                 athlete_id.to_string(),
                 name,
                 periods,
-                time.to_string(),
+                format_seconds_to_time(time),
                 date,
                 status,
                 observations,
@@ -304,7 +311,7 @@ impl Database {
             "Atleta ID",
             "Nombre del Atleta",
             "Periodos Completados",
-            "Tiempo Total (s)",
+            "Tiempo Total",
             "Fecha",
             "Estado",
             "Observaciones",
@@ -332,7 +339,7 @@ impl Database {
                 athlete_id.to_string(),
                 name,
                 periods,
-                time.to_string(),
+                format_seconds_to_time(time),
                 date,
                 status,
                 observations,
@@ -480,7 +487,7 @@ impl Database {
 
         // Write headers
         let headers = ["ID", "Atleta ID", "Nombre del Atleta", "Periodos Completados", 
-                      "Tiempo Total (s)", "Fecha", "Estado", "Observaciones", "Distancia Total (m)"];
+                      "Tiempo Total", "Fecha", "Estado", "Observaciones", "Distancia Total (m)"];
         for (col, header) in headers.iter().enumerate() {
             worksheet.write_string_with_format(0, col as u16, *header, &header_format)?;
             worksheet.set_column_width(col as u16, 15)?;
@@ -507,7 +514,7 @@ impl Database {
             worksheet.write_number(row_num, 1, athlete_id as f64)?;
             worksheet.write_string(row_num, 2, &name)?;
             worksheet.write_string(row_num, 3, &periods)?;
-            worksheet.write_number(row_num, 4, time as f64)?;
+            worksheet.write_string(row_num, 4, &format_seconds_to_time(time))?;
             worksheet.write_string(row_num, 5, &date)?;
             worksheet.write_string(row_num, 6, &status)?;
             worksheet.write_string(row_num, 7, &observations)?;
@@ -545,7 +552,7 @@ impl Database {
 
         // Write headers
         let headers = ["ID", "Atleta ID", "Nombre del Atleta", "Periodos Completados", 
-                      "Tiempo Total (s)", "Fecha", "Estado", "Observaciones", "Distancia Total (m)"];
+                      "Tiempo Total", "Fecha", "Estado", "Observaciones", "Distancia Total (m)"];
         for (col, header) in headers.iter().enumerate() {
             worksheet.write_string_with_format(0, col as u16, *header, &header_format)?;
             worksheet.set_column_width(col as u16, 15)?;
@@ -572,7 +579,7 @@ impl Database {
             worksheet.write_number(row_num, 1, athlete_id as f64)?;
             worksheet.write_string(row_num, 2, &name)?;
             worksheet.write_string(row_num, 3, &periods)?;
-            worksheet.write_number(row_num, 4, time as f64)?;
+            worksheet.write_string(row_num, 4, &format_seconds_to_time(time))?;
             worksheet.write_string(row_num, 5, &date)?;
             worksheet.write_string(row_num, 6, &status)?;
             worksheet.write_string(row_num, 7, &observations)?;
