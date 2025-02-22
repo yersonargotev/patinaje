@@ -1,5 +1,6 @@
 use std::path::PathBuf;
 use std::sync::Arc;
+use rusqlite::params;
 use crate::db::{self, Database};
 use crate::models::{Athlete, AthleteEvaluation, EvaluationTemplate};
 
@@ -135,4 +136,64 @@ impl EvaluationService {
         self.db.export_athlete_evaluations_to_xlsx(athlete_id, path)
             .map_err(|e| e.to_string())
     }
+
+    pub async fn save_batch_evaluations(
+    &self,
+    evaluations: Vec<(Athlete, String, i32, f32, String)>,
+) -> Result<Vec<(i64, i64, i64)>, String> {
+    let current_date = chrono::Local::now().to_rfc3339();
+    let mut conn = self.db.connection.lock().unwrap();
+    let tx = conn.transaction().map_err(|e| e.to_string())?;
+
+    let mut results = Vec::with_capacity(evaluations.len());
+
+    for (athlete, completed_periods, total_time, total_distance, status) in evaluations {
+        // Validate athlete data
+        if athlete.age <= 0 || athlete.age >= 150 {
+            tx.rollback().map_err(|e| e.to_string())?;
+            return Err("Invalid age".to_string());
+        }
+        if athlete.weight <= 0.0 || athlete.height <= 0.0 {
+            tx.rollback().map_err(|e| e.to_string())?;
+            return Err("Invalid weight or height".to_string());
+        }
+
+        // Insert athlete
+        tx.execute(
+            "INSERT INTO athletes (name, age, weight, height, observations) VALUES (?1, ?2, ?3, ?4, ?5)",
+            params![
+                athlete.name,
+                athlete.age,
+                athlete.weight,
+                athlete.height,
+                athlete.observations,
+            ],
+        ).map_err(|e| e.to_string())?;
+        let athlete_id = tx.last_insert_rowid();
+
+        // Insert template
+        tx.execute(
+            "INSERT INTO evaluation_templates (completed_periods, total_time, date, total_distance) VALUES (?1, ?2, ?3, ?4)",
+            params![
+                completed_periods,
+                total_time,
+                current_date,
+                total_distance,
+            ],
+        ).map_err(|e| e.to_string())?;
+        let template_id = tx.last_insert_rowid();
+
+        // Insert evaluation
+        tx.execute(
+            "INSERT INTO athlete_evaluations (athlete_id, template_id, status, date) VALUES (?1, ?2, ?3, ?4)",
+            params![athlete_id, template_id, status, current_date],
+        ).map_err(|e| e.to_string())?;
+        let eval_id = tx.last_insert_rowid();
+
+        results.push((athlete_id, template_id, eval_id));
+    }
+
+    tx.commit().map_err(|e| e.to_string())?;
+    Ok(results)
+}
 } 

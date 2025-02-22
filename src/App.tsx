@@ -304,62 +304,36 @@ function App() {
 		setShowFinishModal(false);
 
 		try {
-			// Verificar que invoke esté disponible
-			if (typeof invoke !== "function") {
-				throw new Error("Tauri invoke no está disponible");
-			}
+			// Prepare all data in a single batch
+			const activeAthletes = athletes.filter((a) => a.active);
 
-			// Validar datos antes de enviar
-			const invalidAthletes = athletes
-				.filter((a) => a.active)
-				.filter(
-					(athlete) =>
-						!athlete.name.trim() ||
-						athlete.age <= 0 ||
-						athlete.weight <= 0 ||
-						athlete.height <= 0,
-				);
+			// Validate all athletes first
+			const invalidAthletes = activeAthletes.filter(
+				(athlete) =>
+					!athlete.name.trim() ||
+					athlete.age <= 0 ||
+					athlete.weight <= 0 ||
+					athlete.height <= 0,
+			);
 
 			if (invalidAthletes.length > 0) {
 				toast.error("Los datos de los deportistas activos no están completos.");
 				return;
 			}
 
-			// Save data for each active athlete using Promise.all for better performance
-			await Promise.all(
-				athletes
-					.filter((a) => a.active)
-					.map(async (athlete) => {
-						try {
-							// Redondear totalTime a un número entero
-							const roundedTotalTime = Math.floor(totalTime);
+			// Prepare batch data
+			const evaluationsData = activeAthletes.map((athlete) => [
+				athlete,
+				JSON.stringify(athlete.completedPeriods),
+				Math.floor(totalTime),
+				athlete.totalDistance,
+				"completed",
+			]);
 
-							await invoke("save_evaluation_data", {
-								athlete: {
-									name: athlete.name,
-									age: athlete.age,
-									weight: athlete.weight,
-									height: athlete.height,
-									observations: athlete.observations || "",
-								},
-								completedPeriods: JSON.stringify(athlete.completedPeriods),
-								totalTime: roundedTotalTime,
-								totalDistance: athlete.totalDistance,
-								status: "completed",
-							});
-						} catch (error) {
-							console.error(
-								`Error saving evaluation for ${athlete.name}:`,
-								error,
-							);
-							throw new Error(
-								error instanceof Error
-									? error.message
-									: "Error al guardar la evaluación",
-							);
-						}
-					}),
-			);
+			// Single batch save
+			await invoke("save_batch_evaluations", {
+				evaluations: evaluationsData,
+			});
 
 			toast.success("Evaluaciones guardadas correctamente");
 		} catch (error) {

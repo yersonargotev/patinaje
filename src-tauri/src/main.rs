@@ -135,6 +135,19 @@ async fn export_athlete_evaluations_to_xlsx(
         .map_err(|e| e.to_string())
 }
 
+#[tauri::command]
+async fn save_batch_evaluations(
+    state: State<'_, ServiceState>,
+    app: tauri::AppHandle,
+    evaluations: Vec<(Athlete, String, i32, f32, String)>,
+) -> Result<Vec<(i64, i64, i64)>, String> {
+    let result = state.0.save_batch_evaluations(evaluations).await;
+    if result.is_ok() {
+        let _ = app.emit("evaluation-completed", ());
+    }
+    result
+}
+
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
@@ -160,7 +173,8 @@ fn main() {
             export_athlete_evaluations,
             export_all_evaluations_to_xlsx,
             export_athlete_evaluations_to_xlsx,
-            update_evaluation_observations
+            update_evaluation_observations,
+            save_batch_evaluations,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
