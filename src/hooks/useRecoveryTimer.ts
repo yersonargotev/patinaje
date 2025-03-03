@@ -64,23 +64,17 @@ export function useRecoveryTimer() {
 			}
 
 			try {
+				// Transición al siguiente periodo
+				setIsRecovery(false);
+				setCurrentRecoveryTime(config.recoveryTime);
+				setWorkTime(0);
+
 				// Anunciar fin de recuperación
 				await audioService?.announceRecoveryComplete();
 				await new Promise((resolve) => setTimeout(resolve, 2000));
 
 				// Anunciar inicio del siguiente periodo
 				await audioService?.announceWorkStartPeriod(position.period);
-
-				// Transición al siguiente periodo
-				setIsRecovery(false);
-				setCurrentRecoveryTime(config.recoveryTime);
-				setWorkTime(0);
-
-				// Esperar un momento antes de iniciar el siguiente periodo
-				await new Promise((resolve) => setTimeout(resolve, 1000));
-
-				// Reproducir beep inicial del nuevo periodo
-				audioService?.playIntervalBeep();
 			} catch (error) {
 				console.error("Error en la transición de recuperación:", error);
 				toast.error("Error al finalizar el periodo de recuperación");
