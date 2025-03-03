@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useStore, getServices } from "../store";
 import { getPeriodData } from "../utils/testData";
 
@@ -13,6 +13,11 @@ export function useWorkTimer() {
 		setIsRecovery,
 	} = useStore();
 
+	// Referencia para almacenar los tiempos exactos de cada segmento
+	const segmentStartTimeRef = useRef<number | null>(null);
+	const lastIntervalRef = useRef<number>(-1);
+	const intervalTimingRef = useRef<number[]>([]);
+
 	useEffect(() => {
 		if (
 			config.isRunning &&
@@ -24,30 +29,47 @@ export function useWorkTimer() {
 			const periodData = getPeriodData(position.period);
 			if (!periodData) return;
 
+			// Reiniciar los temporizadores y referencias
+			setWorkTime(0);
+			segmentStartTimeRef.current = performance.now();
+			lastIntervalRef.current = -1;
+			intervalTimingRef.current = [];
+
 			if (!config.isPaused) {
-				setWorkTime(0);
 				audioService?.playIntervalBeep();
 			}
 
 			const startTime = performance.now();
-			let lastBeepTime = 0;
 			let animationFrameId: number;
 
 			const updateTimer = () => {
 				const now = performance.now();
-				const elapsed = (now - startTime) / 1000; // Convert to seconds with millisecond precision
+				const elapsed = (now - startTime) / 1000; // Tiempo transcurrido total en segundos
 				setWorkTime(elapsed);
 
-				const currentInterval = Math.floor(elapsed / periodData.partialTime);
-				const currentSegment = currentInterval % 4;
-				const currentLap = Math.floor(currentInterval / 4);
+				// Cálculo teórico del intervalo actual basado en el tiempo transcurrido
+				const theoreticalInterval = Math.floor(
+					elapsed / periodData.partialTime,
+				);
 
-				const shouldBeep =
-					currentInterval > Math.floor(lastBeepTime / periodData.partialTime);
+				// Si cambiamos de intervalo
+				if (theoreticalInterval > lastIntervalRef.current) {
+					const actualSegmentTime = now - (segmentStartTimeRef.current || now);
 
-				if (shouldBeep && elapsed >= periodData.partialTime) {
+					// Guardar el tiempo real del segmento completado (en segundos)
+					if (segmentStartTimeRef.current !== null) {
+						const segmentTimeInSeconds = actualSegmentTime / 1000;
+						intervalTimingRef.current.push(segmentTimeInSeconds);
+
+						// Para debugging: console.log(`Segmento ${lastIntervalRef.current + 1} completado en: ${segmentTimeInSeconds.toFixed(2)}s (esperado: ${periodData.partialTime.toFixed(2)}s)`);
+					}
+
+					// Actualizar para el nuevo segmento
+					segmentStartTimeRef.current = now;
+					lastIntervalRef.current = theoreticalInterval;
+
+					// Reproducir beep y actualizar distancia
 					audioService?.playIntervalBeep();
-					lastBeepTime = elapsed;
 
 					setAthletes((currentAthletes) =>
 						currentAthletes.map((athlete) => {
@@ -63,13 +85,18 @@ export function useWorkTimer() {
 					);
 				}
 
+				// Actualizar la posición en el track
+				const currentSegment = theoreticalInterval % 4;
+				const currentLap = Math.floor(theoreticalInterval / 4);
+
 				setPosition({
 					elapsedTime: elapsed,
 					segment: currentSegment,
 					lap: currentLap,
-					expectedSegment: currentInterval % 16,
+					expectedSegment: theoreticalInterval % 16,
 				});
 
+				// Verificar si se ha completado el periodo
 				if (elapsed >= periodData.totalTime) {
 					cancelAnimationFrame(animationFrameId);
 
