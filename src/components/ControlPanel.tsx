@@ -84,7 +84,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
 							onChange={(e) => onPeriodChange(Number(e.target.value))}
 							className="mt-1 block w-full border-1 rounded-md border-gray-300 py-1 px-3 bg-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
 						>
-							{Array(21)
+							{Array(34)
 								.fill(0)
 								.map((_, idx) => {
 									const period = idx + 2;
