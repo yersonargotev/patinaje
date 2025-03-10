@@ -3,11 +3,6 @@ description: Best practices for using Shadcn UI components
 globs: **/*.{ts,tsx}
 alwaysApply: false
 ---
----
-name: shadcn-ui-best-practices.mdc
-description: Best practices for using Shadcn UI components
-globs: **/*.{ts,tsx}
----
 
 - Follow component naming conventions
 - Use props for customization

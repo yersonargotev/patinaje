@@ -3,11 +3,6 @@ description: Best practices for building React applications
 globs: **/*.{ts,tsx,js,jsx}
 alwaysApply: false
 ---
----
-name: reactjs-best-practices.mdc
-description: Best practices for building React applications
-globs: **/*.{ts,tsx,js,jsx}
----
 
 - Use functional components with hooks
 - Implement proper state management (e.g., Redux, Context API)

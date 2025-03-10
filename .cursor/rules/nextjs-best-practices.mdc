@@ -3,11 +3,6 @@ description: Best practices for Next.js applications and routing
 globs: **/*.{ts,tsx}
 alwaysApply: false
 ---
----
-name: nextjs-best-practices.mdc
-description: Best practices for Next.js applications and routing
-globs: **/*.{ts,tsx}
----
 
 - Use the App Router for better performance
 - Implement proper error boundaries
