@@ -1,5 +1,6 @@
-import { formatTime } from "../utils/timing";
+import { useStore } from "../store";
 import { getPeriodData } from "../utils/testData";
+import { formatTime } from "../utils/timing";
 
 interface StatusDisplayProps {
 	period: number;
@@ -16,11 +17,14 @@ export const StatusDisplay: React.FC<StatusDisplayProps> = ({
 	activeAthletes,
 	totalDistance,
 }) => {
+	const { isRecovery } = useStore();
 	const periodData = getPeriodData(period);
 
 	const segmentDistance = segment * 50;
 
-	const currentLap = Math.floor((totalDistance % 800) / 200);
+	// Fix: Only show lap count > 0 when not in recovery mode
+	// During recovery, the lap should be 0
+	const currentLap = isRecovery ? 0 : Math.floor((totalDistance % 800) / 200);
 
 	return (
 		<div className="grid grid-cols-4 gap-4 mb-4">
