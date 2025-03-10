@@ -1,0 +1,13 @@
+---
+description: Best practices for using Tailwind CSS
+globs: **/*.{ts,tsx,css}
+alwaysApply: false
+---
+---
+name: tailwindcss-best-practices.mdc
+description: Best practices for using Tailwind CSS
+globs: **/*.{ts,tsx,css}
+---
+
+- Use utility-first approach for styling
+- Use responsive design utilities 

@@ -1,0 +1,15 @@
+---
+description: Best practices for building desktop applications with Tauri
+globs: **/*.{rs,ts,tsx}
+alwaysApply: false
+---
+---
+name: tauri-best-practices.mdc
+description: Best practices for building desktop applications with Tauri
+globs: **/*.{rs,ts,tsx}
+---
+
+- Use Tauri's API for file system operations
+- Implement proper error handling with Tauri's Result type
+- Optimize bundle size by selectively including dependencies
+- Use Tauri's updater for seamless application updates

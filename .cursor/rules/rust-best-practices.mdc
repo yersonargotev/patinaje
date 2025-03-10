@@ -1,0 +1,15 @@
+---
+description: Best practices for writing performant Rust code
+globs: **/*.rs
+alwaysApply: false
+---
+---
+name: rust-best-practices.mdc
+description: Best practices for writing performant Rust code
+globs: **/*.rs
+---
+
+- Use Rust's ownership system to prevent data races
+- Implement proper error handling with Result and Option
+- Utilize async/await for non-blocking I/O operations
+- Leverage Rust's trait system for generic programming
