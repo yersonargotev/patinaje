@@ -22,9 +22,12 @@ export const StatusDisplay: React.FC<StatusDisplayProps> = ({
 
 	const segmentDistance = segment * 50;
 
-	// Fix: Only show lap count > 0 when not in recovery mode
-	// During recovery, the lap should be 0
-	const currentLap = isRecovery ? 0 : Math.floor((totalDistance % 800) / 200);
+	const distanceInPeriod = totalDistance % 800;
+	const lapNumber = isRecovery ?
+		(distanceInPeriod === 0 ? 4 : Math.ceil(distanceInPeriod / 200)) :
+		Math.ceil(distanceInPeriod / 200);
+
+	const currentLap = distanceInPeriod === 0 && totalDistance > 0 ? 4 : lapNumber;
 
 	return (
 		<div className="grid grid-cols-4 gap-4 mb-4">

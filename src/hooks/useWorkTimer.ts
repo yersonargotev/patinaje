@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { useStore, getServices } from "../store";
+import { getServices, useStore } from "../store";
 import { getPeriodData } from "../utils/testData";
 
 export function useWorkTimer() {
