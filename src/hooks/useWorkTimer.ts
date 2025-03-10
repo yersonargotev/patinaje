@@ -62,6 +62,22 @@ export function useWorkTimer() {
 						intervalTimingRef.current.push(segmentTimeInSeconds);
 
 						// Para debugging: console.log(`Segmento ${lastIntervalRef.current + 1} completado en: ${segmentTimeInSeconds.toFixed(2)}s (esperado: ${periodData.partialTime.toFixed(2)}s)`);
+
+						// Solo incrementar la distancia si no es el inicio del test (lastIntervalRef.current >= 0)
+						if (lastIntervalRef.current >= 0) {
+							setAthletes((currentAthletes) =>
+								currentAthletes.map((athlete) => {
+									if (athlete.active) {
+										const newDistance = athlete.totalDistance + 50;
+										return {
+											...athlete,
+											totalDistance: newDistance,
+										};
+									}
+									return athlete;
+								}),
+							);
+						}
 					}
 
 					// Actualizar para el nuevo segmento
@@ -70,19 +86,6 @@ export function useWorkTimer() {
 
 					// Reproducir beep y actualizar distancia
 					audioService?.playIntervalBeep();
-
-					setAthletes((currentAthletes) =>
-						currentAthletes.map((athlete) => {
-							if (athlete.active) {
-								const newDistance = athlete.totalDistance + 50;
-								return {
-									...athlete,
-									totalDistance: newDistance,
-								};
-							}
-							return athlete;
-						}),
-					);
 				}
 
 				// Actualizar la posición en el track
