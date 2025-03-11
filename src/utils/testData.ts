@@ -181,7 +181,7 @@ export const periodData: PeriodData[] = [
 		speed: 37.6,
 		lapTime: 19.14,
 		partialTime: 4.79,
-		totalTime: 76.56,
+		totalTime: 76.64,
 		distance: 17600,
 	},
 	{
@@ -189,7 +189,7 @@ export const periodData: PeriodData[] = [
 		speed: 38.4,
 		lapTime: 18.75,
 		partialTime: 4.69,
-		totalTime: 75,
+		totalTime: 75.04,
 		distance: 18400,
 	},
 	{
@@ -221,7 +221,7 @@ export const periodData: PeriodData[] = [
 		speed: 41.6,
 		lapTime: 17.3,
 		partialTime: 4.33,
-		totalTime: 69.2,
+		totalTime: 69.28,
 		distance: 21600,
 	},
 	{
@@ -237,7 +237,7 @@ export const periodData: PeriodData[] = [
 		speed: 43.2,
 		lapTime: 16.66,
 		partialTime: 4.17,
-		totalTime: 66.64,
+		totalTime: 66.72,
 		distance: 23200,
 	},
 	{
@@ -253,7 +253,7 @@ export const periodData: PeriodData[] = [
 		speed: 44.8,
 		lapTime: 16.07,
 		partialTime: 4.02,
-		totalTime: 64.28,
+		totalTime: 64.32,
 		distance: 24800,
 	},
 	{
@@ -261,7 +261,7 @@ export const periodData: PeriodData[] = [
 		speed: 45.6,
 		lapTime: 15.79,
 		partialTime: 3.95,
-		totalTime: 63.16,
+		totalTime: 63.2,
 		distance: 25600,
 	},
 	{
@@ -269,7 +269,7 @@ export const periodData: PeriodData[] = [
 		speed: 46.4,
 		lapTime: 15.51,
 		partialTime: 3.88,
-		totalTime: 62.04,
+		totalTime: 62.08,
 		distance: 26400,
 	},
 	{
