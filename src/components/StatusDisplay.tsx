@@ -4,7 +4,6 @@ import { formatTime } from "../utils/timing";
 
 interface StatusDisplayProps {
 	period: number;
-	segment: number;
 	recoveryTime: number;
 	activeAthletes: number;
 	totalDistance: number;
@@ -12,15 +11,12 @@ interface StatusDisplayProps {
 
 export const StatusDisplay: React.FC<StatusDisplayProps> = ({
 	period,
-	segment,
 	recoveryTime,
 	activeAthletes,
 	totalDistance,
 }) => {
 	const { isRecovery } = useStore();
 	const periodData = getPeriodData(period);
-
-	const segmentDistance = segment * 50;
 
 	const distanceInPeriod = totalDistance % 800;
 	const lapNumber = isRecovery ?
@@ -43,7 +39,7 @@ export const StatusDisplay: React.FC<StatusDisplayProps> = ({
 				<h3 className="text-sm font-medium text-gray-500">Distancia Total</h3>
 				<p className="text-2xl font-bold">{totalDistance}m</p>
 				<p className="text-sm text-gray-600">
-					Segmento actual: {segmentDistance}m
+					Distancia: {distanceInPeriod}m
 				</p>
 				<p className="text-sm text-gray-600">Vuelta: {currentLap}</p>
 			</div>

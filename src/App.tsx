@@ -63,7 +63,6 @@ function App() {
 
 				<StatusDisplay
 					period={position.period}
-					segment={position.segment}
 					recoveryTime={config.recoveryTime}
 					activeAthletes={athletes.filter((a) => a.active).length}
 					totalDistance={athletes[0]?.totalDistance || 0}
