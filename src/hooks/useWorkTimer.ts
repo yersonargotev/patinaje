@@ -118,7 +118,6 @@ export function useWorkTimer() {
 					);
 
 					const finishPeriod = async () => {
-						await new Promise((resolve) => setTimeout(resolve, 1000));
 						await audioService?.announceWorkComplete();
 						await new Promise((resolve) => setTimeout(resolve, 1500));
 						setIsRecovery(true);
