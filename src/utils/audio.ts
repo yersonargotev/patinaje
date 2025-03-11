@@ -138,7 +138,6 @@ export class AudioService {
 	}
 
 	public async announceWorkComplete(): Promise<void> {
-		await this.stopAll();
 		await this.internalPlaySound("work-complete");
 	}
 
